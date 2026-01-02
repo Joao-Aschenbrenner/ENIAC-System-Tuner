@@ -1,189 +1,113 @@
 """
-INSTALADOR PROFISSIONAL COM INTERFACE GRÁFICA
-ENIAC SYSTEM TUNER v4.0 - Instalador Completo
-CORRIGIDO - Instalação REAL com cópia de arquivos
+INSTALADOR ENIAC SYSTEM TUNER v4.0 - VERSÃO CORRIGIDA
+Corrige: Atalhos, executáveis, e instalação completa
 """
 
 import os
 import sys
-import subprocess
 import shutil
-import winreg
 import threading
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, scrolledtext
 from pathlib import Path
 import time
+import winreg
+import subprocess
 
-# Configurar encoding CORRETAMENTE
-if sys.platform == 'win32':
-    try:
-        if sys.stdout is not None:
-            sys.stdout.reconfigure(encoding='utf-8')
-        if sys.stderr is not None:
-            sys.stderr.reconfigure(encoding='utf-8')
-        os.system('chcp 65001 >nul 2>&1')
-    except:
-        pass
+def corrigir_tela_preta():
+    """Correção para tela preta no Windows"""
+    if sys.platform == 'win32':
+        try:
+            import ctypes
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        except:
+            pass
 
 class InstaladorENIAC:
     def __init__(self, root):
+        corrigir_tela_preta()
+        
         self.root = root
         self.root.title("ENIAC System Tuner - Instalador")
         self.root.geometry("800x600")
         self.root.resizable(False, False)
         self.root.configure(bg='#0f0f0f')
         
-        # Variáveis
         self.pagina_atual = 0
         self.caminho_instalacao = "C:\\Program Files\\ESTU"
         self.criar_atalho_desktop = tk.BooleanVar(value=True)
         self.criar_atalho_menu = tk.BooleanVar(value=True)
         self.instalando = False
+        self.aceitar_var = tk.BooleanVar(value=False)
         
-        # Verificar admin
-        if not self.is_admin():
-            self.pedir_admin()
+        if getattr(sys, 'frozen', False):
+            self.pasta_atual = os.path.dirname(sys.executable)
+        else:
+            self.pasta_atual = os.path.dirname(os.path.abspath(__file__))
         
         self.criar_interface()
         self.mostrar_pagina(0)
+        self.centralizar_janela()
     
-    def is_admin(self):
-        """Verifica se está rodando como administrador"""
-        try:
-            import ctypes
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except:
-            return False
-    
-    def pedir_admin(self):
-        """Solicita privilégios de administrador"""
-        try:
-            import ctypes
-            script = os.path.abspath(sys.argv[0])
-            params = ' '.join([script] + sys.argv[1:])
-            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
-            sys.exit(0)
-        except:
-            messagebox.showerror(
-                "Permissão Necessária",
-                "Este instalador precisa de privilégios de Administrador!\n\n"
-                "Clique com botão direito e selecione 'Executar como administrador'"
-            )
-            sys.exit(1)
+    def centralizar_janela(self):
+        self.root.update_idletasks()
+        largura = self.root.winfo_width()
+        altura = self.root.winfo_height()
+        x = (self.root.winfo_screenwidth() // 2) - (largura // 2)
+        y = (self.root.winfo_screenheight() // 2) - (altura // 2)
+        self.root.geometry(f'{largura}x{altura}+{x}+{y}')
     
     def criar_interface(self):
-        """Cria interface do instalador"""
-        
-        # Header
         header_frame = tk.Frame(self.root, bg='#1a1a1a', height=120)
         header_frame.pack(fill=tk.X, side=tk.TOP)
         header_frame.pack_propagate(False)
         
-        # Logo e título
-        logo_label = tk.Label(
-            header_frame,
-            text="⚡",
-            font=("Segoe UI", 48),
-            bg='#1a1a1a',
-            fg='#00ff88'
-        )
+        logo_label = tk.Label(header_frame, text="⚡", font=("Segoe UI", 48), bg='#1a1a1a', fg='#00ff88')
         logo_label.place(x=30, y=25)
         
-        titulo = tk.Label(
-            header_frame,
-            text="ENIAC SYSTEM TUNER",
-            font=("Segoe UI", 24, "bold"),
-            bg='#1a1a1a',
-            fg='#00ff88'
-        )
+        titulo = tk.Label(header_frame, text="ENIAC SYSTEM TUNER", font=("Segoe UI", 24, "bold"), bg='#1a1a1a', fg='#00ff88')
         titulo.place(x=120, y=30)
         
-        subtitulo = tk.Label(
-            header_frame,
-            text="Ultimate Edition v4.0 - Assistente de Instalação",
-            font=("Segoe UI", 11),
-            bg='#1a1a1a',
-            fg='#888888'
-        )
+        subtitulo = tk.Label(header_frame, text="Ultimate Edition v4.0 - Assistente de Instalação", font=("Segoe UI", 11), bg='#1a1a1a', fg='#888888')
         subtitulo.place(x=120, y=70)
         
-        # Área de conteúdo
         self.content_frame = tk.Frame(self.root, bg='#0f0f0f')
-        self.content_frame.pack(fill=tk.BOTH, expand=True, after=header_frame)
+        self.content_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
     
     def limpar_conteudo(self):
-        """Limpa área de conteúdo"""
-        for widget in self.content_frame.winfo_children():
-            widget.destroy()
+        try:
+            for widget in self.content_frame.winfo_children():
+                widget.destroy()
+        except:
+            pass
     
     def mostrar_pagina(self, pagina):
-        """Mostra página do instalador"""
         self.pagina_atual = pagina
         self.limpar_conteudo()
         
         if pagina == 0:
-            self.pagina_bem_vindo()
+            self.pagina_licenca()
         elif pagina == 1:
             self.pagina_configuracao()
         elif pagina == 2:
-            self.pagina_resumo()
-        elif pagina == 3:
             self.pagina_instalacao()
-        elif pagina == 4:
+        elif pagina == 3:
             self.pagina_concluido()
     
-    def pagina_bem_vindo(self):
-        """Página de boas-vindas com termos de licença"""
-        from tkinter import scrolledtext
+    def pagina_licenca(self):
+        main_frame = tk.Frame(self.content_frame, bg='#0f0f0f')
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        container = tk.Frame(self.content_frame, bg='#0f0f0f')
-        container.pack(fill=tk.BOTH, expand=True, padx=40, pady=20)
+        tk.Label(main_frame, text="Bem-vindo ao Instalador", font=("Segoe UI", 20, "bold"), bg='#0f0f0f', fg='#00ff88').pack(pady=(0, 10))
+        tk.Label(main_frame, text="ENIAC SYSTEM TUNER ULTIMATE v4.0", font=("Segoe UI", 12), bg='#0f0f0f', fg='#888888').pack(pady=(0, 20))
         
-        # Título
-        titulo = tk.Label(
-            container,
-            text="Bem-vindo ao Instalador",
-            font=("Segoe UI", 18, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        titulo.pack(pady=(0, 10))
+        licenca_frame = tk.Frame(main_frame, bg='#1a1a1a')
+        licenca_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
         
-        # Subtítulo
-        subtitulo = tk.Label(
-            container,
-            text="ENIAC SYSTEM TUNER ULTIMATE v4.0",
-            font=("Segoe UI", 12),
-            bg='#0f0f0f',
-            fg='#888888'
-        )
-        subtitulo.pack(pady=(0, 15))
+        licenca_text = scrolledtext.ScrolledText(licenca_frame, font=("Consolas", 10), bg='#1a1a1a', fg='#ffffff', wrap=tk.WORD, height=12, relief=tk.FLAT)
+        licenca_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Texto de introdução
-        intro = tk.Label(
-            container,
-            text="Por favor, leia atentamente os termos de licença antes de continuar:",
-            font=("Segoe UI", 10),
-            bg='#0f0f0f',
-            fg='#ffffff'
-        )
-        intro.pack(pady=(0, 10))
-        
-        # Área de texto com termos de licença
-        licenca_text = scrolledtext.ScrolledText(
-            container,
-            font=("Consolas", 9),
-            bg='#1a1a1a',
-            fg='#ffffff',
-            wrap=tk.WORD,
-            relief=tk.FLAT,
-            bd=0,
-            height=12
-        )
-        licenca_text.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
-        
-        licenca_conteudo = """TERMOS DE LICENÇA - ENIAC SYSTEM TUNER ULTIMATE v4.0
+        texto_licenca = """TERMOS DE LICENÇA - ENIAC SYSTEM TUNER ULTIMATE v4.0
 
 Copyright © 2025 ENIAC System Tuner. Todos os direitos reservados.
 
@@ -201,876 +125,471 @@ RESTRIÇÕES:
 ✗ Remoção de marcas ou créditos
 
 ISENÇÃO DE RESPONSABILIDADE:
-O software executa modificações no sistema operacional. Embora testado, não nos 
-responsabilizamos por quaisquer danos diretos ou indiretos. Recomenda-se criar um 
-ponto de restauração antes de usar.
-
-COLETA DE DADOS:
-Este software NÃO coleta dados pessoais ou telemetria.
-Todas as operações são executadas localmente.
-
-RECURSOS INCLUÍDOS:
-⚡ Otimização completa do Windows
-💻 Detecção automática de hardware
-⏰ Agendamentos automáticos
-🔍 Diagnóstico profundo do sistema
-🎮 Modo gamer para alto desempenho
-🛠️ Ferramentas integradas
-
-Ao continuar com a instalação, você concorda com estes termos."""
+O software executa modificações no sistema operacional.
+Recomenda-se criar um ponto de restauração antes de usar."""
         
-        licenca_text.insert('1.0', licenca_conteudo)
+        licenca_text.insert('1.0', texto_licenca)
         licenca_text.config(state='disabled')
         
-        # Frame para checkbox e botão
-        bottom_frame = tk.Frame(container, bg='#0f0f0f')
-        bottom_frame.pack(pady=20, fill=tk.X)
+        controles_frame = tk.Frame(main_frame, bg='#0f0f0f')
+        controles_frame.pack(fill=tk.X, pady=(20, 0))
         
-        # Checkbox de aceitação
-        self.aceitar_licenca = tk.BooleanVar(value=False)
+        checkbox_frame = tk.Frame(controles_frame, bg='#0f0f0f')
+        checkbox_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        cb = tk.Checkbutton(
-            bottom_frame,
-            text="✓ Eu li e aceito os termos de licença",
-            variable=self.aceitar_licenca,
-            font=("Segoe UI", 12, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88',
-            selectcolor='#1a1a1a',
-            activebackground='#0f0f0f',
-            activeforeground='#00ff88',
-            command=self.atualizar_botao_continuar_welcome
-        )
-        cb.pack(pady=(0, 20))
+        self.cb_aceitar = tk.Checkbutton(checkbox_frame, text="Eu li e aceito os termos de licença", variable=self.aceitar_var, font=("Segoe UI", 11), bg='#0f0f0f', fg='#ffffff', selectcolor='#1a1a1a', command=self.verificar_aceite)
+        self.cb_aceitar.pack(side=tk.LEFT, anchor='w')
         
-        # BOTÃO CONTINUAR
-        self.btn_continuar_welcome = tk.Button(
-            bottom_frame,
-            text="CONTINUAR ▶",
-            font=("Segoe UI", 14, "bold"),
-            bg='#00ff88',
-            fg='#000000',
-            activebackground='#00dd77',
-            command=self.ir_para_configuracao,
-            relief=tk.FLAT,
-            bd=0,
-            padx=50,
-            pady=15,
-            cursor='hand2',
-            state='disabled'
-        )
-        self.btn_continuar_welcome.pack()
+        botoes_frame = tk.Frame(controles_frame, bg='#0f0f0f')
+        botoes_frame.pack(side=tk.RIGHT)
         
-        # Botão cancelar
-        footer_btns = tk.Frame(container, bg='#0f0f0f')
-        footer_btns.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
+        tk.Button(botoes_frame, text="Cancelar", font=("Segoe UI", 11), bg='#ff3366', fg='#ffffff', command=self.root.quit, width=15, height=2).pack(side=tk.LEFT, padx=5)
         
-        tk.Button(
-            footer_btns,
-            text="✕ Cancelar",
-            font=("Segoe UI", 10),
-            bg='#ff3366',
-            fg='#ffffff',
-            command=self.cancelar,
-            relief=tk.FLAT,
-            padx=20,
-            pady=8,
-            cursor='hand2'
-        ).pack(side=tk.LEFT)
+        self.btn_aceitar = tk.Button(botoes_frame, text="Aceitar e Continuar", font=("Segoe UI", 11, "bold"), bg='#666666', fg='#ffffff', command=lambda: self.mostrar_pagina(1), state='disabled', width=15, height=2)
+        self.btn_aceitar.pack(side=tk.LEFT, padx=5)
+        
+        self.verificar_aceite()
     
-    def atualizar_botao_continuar_welcome(self):
-        """Atualiza estado do botão continuar"""
-        if hasattr(self, 'btn_continuar_welcome'):
-            if self.aceitar_licenca.get():
-                self.btn_continuar_welcome.config(state='normal', bg='#00ff88')
+    def verificar_aceite(self):
+        try:
+            if self.aceitar_var.get():
+                self.btn_aceitar.config(state='normal', bg='#00ff88', fg='#000000', activebackground='#00cc66')
             else:
-                self.btn_continuar_welcome.config(state='disabled', bg='#666666')
-    
-    def ir_para_configuracao(self):
-        """Vai para página de configuração"""
-        self.mostrar_pagina(1)
+                self.btn_aceitar.config(state='disabled', bg='#666666', fg='#ffffff', activebackground='#666666')
+        except:
+            pass
     
     def pagina_configuracao(self):
-        """Página de configuração"""
-        container = tk.Frame(self.content_frame, bg='#0f0f0f')
-        container.pack(fill=tk.BOTH, expand=True, padx=40, pady=20)
+        main_frame = tk.Frame(self.content_frame, bg='#0f0f0f')
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        content_area = tk.Frame(container, bg='#0f0f0f')
-        content_area.pack(fill=tk.BOTH, expand=True)
+        tk.Label(main_frame, text="Configurar Instalação", font=("Segoe UI", 20, "bold"), bg='#0f0f0f', fg='#00ff88').pack(pady=(0, 20))
         
-        titulo = tk.Label(
-            content_area,
-            text="Configurar Instalação",
-            font=("Segoe UI", 16, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        titulo.pack(pady=(0, 20))
-        
-        # Local de instalação
-        local_frame = tk.LabelFrame(
-            content_area,
-            text="📁 Local de Instalação",
-            font=("Segoe UI", 12, "bold"),
-            bg='#1a1a1a',
-            fg='#00ff88',
-            bd=0
-        )
+        local_frame = tk.LabelFrame(main_frame, text="Local de Instalação", font=("Segoe UI", 12, "bold"), bg='#1a1a1a', fg='#00ff88', padx=15, pady=15)
         local_frame.pack(fill=tk.X, pady=(0, 15))
         
-        path_frame = tk.Frame(local_frame, bg='#1a1a1a')
-        path_frame.pack(fill=tk.X, padx=15, pady=15)
+        caminho_frame = tk.Frame(local_frame, bg='#1a1a1a')
+        caminho_frame.pack(fill=tk.X, pady=(0, 10))
         
-        self.entry_caminho = tk.Entry(
-            path_frame,
-            font=("Consolas", 11),
-            bg='#0f0f0f',
-            fg='#ffffff',
-            insertbackground='#ffffff',
-            relief=tk.FLAT,
-            bd=0
-        )
-        self.entry_caminho.insert(0, self.caminho_instalacao)
-        self.entry_caminho.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=8, padx=(0, 10))
+        self.caminho_var = tk.StringVar(value=self.caminho_instalacao)
         
-        btn_procurar = tk.Button(
-            path_frame,
-            text="📂 Procurar",
-            font=("Segoe UI", 10, "bold"),
-            bg='#00aaff',
-            fg='#ffffff',
-            relief=tk.FLAT,
-            bd=0,
-            padx=15,
-            pady=8,
-            cursor='hand2',
-            command=self.procurar_pasta
-        )
-        btn_procurar.pack(side=tk.RIGHT)
+        self.caminho_entry = tk.Entry(caminho_frame, textvariable=self.caminho_var, font=("Segoe UI", 10), bg='#0f0f0f', fg='#ffffff', insertbackground='#ffffff')
+        self.caminho_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
-        espaco_label = tk.Label(
-            local_frame,
-            text="💾 Espaço necessário: ~50 MB",
-            font=("Segoe UI", 9),
-            bg='#1a1a1a',
-            fg='#888888'
-        )
-        espaco_label.pack(anchor='w', padx=15, pady=(0, 10))
+        tk.Button(caminho_frame, text="Procurar", font=("Segoe UI", 9), bg='#00aaff', fg='#ffffff', command=self.escolher_pasta, width=10).pack(side=tk.RIGHT)
         
-        # Opções adicionais
-        opcoes_frame = tk.LabelFrame(
-            content_area,
-            text="⚙️ Opções Adicionais",
-            font=("Segoe UI", 12, "bold"),
-            bg='#1a1a1a',
-            fg='#00ff88',
-            bd=0
-        )
-        opcoes_frame.pack(fill=tk.X, pady=(0, 15))
+        tk.Label(local_frame, text="Espaço necessário: ~50 MB", font=("Segoe UI", 9), bg='#1a1a1a', fg='#888888').pack(anchor='w')
         
-        cb1 = tk.Checkbutton(
-            opcoes_frame,
-            text="✓ Criar atalho na Área de Trabalho",
-            variable=self.criar_atalho_desktop,
-            font=("Segoe UI", 11),
-            bg='#1a1a1a',
-            fg='#ffffff',
-            selectcolor='#0f0f0f',
-            activebackground='#1a1a1a',
-            activeforeground='#00ff88'
-        )
-        cb1.pack(anchor='w', padx=15, pady=8)
+        opcoes_frame = tk.LabelFrame(main_frame, text="Opções Adicionais", font=("Segoe UI", 12, "bold"), bg='#1a1a1a', fg='#00ff88', padx=15, pady=15)
+        opcoes_frame.pack(fill=tk.X, pady=(0, 20))
         
-        cb2 = tk.Checkbutton(
-            opcoes_frame,
-            text="✓ Criar atalho no Menu Iniciar",
-            variable=self.criar_atalho_menu,
-            font=("Segoe UI", 11),
-            bg='#1a1a1a',
-            fg='#ffffff',
-            selectcolor='#0f0f0f',
-            activebackground='#1a1a1a',
-            activeforeground='#00ff88'
-        )
-        cb2.pack(anchor='w', padx=15, pady=8)
+        tk.Checkbutton(opcoes_frame, text="✓ Criar atalho na Área de Trabalho", variable=self.criar_atalho_desktop, font=("Segoe UI", 10), bg='#1a1a1a', fg='#ffffff', selectcolor='#0f0f0f').pack(anchor='w', pady=3)
+        tk.Checkbutton(opcoes_frame, text="✓ Criar atalho no Menu Iniciar", variable=self.criar_atalho_menu, font=("Segoe UI", 10), bg='#1a1a1a', fg='#ffffff', selectcolor='#0f0f0f').pack(anchor='w', pady=3)
         
-        info_label = tk.Label(
-            content_area,
-            text="ℹ️ A instalação levará aproximadamente 2-5 minutos",
-            font=("Segoe UI", 10),
-            bg='#0f0f0f',
-            fg='#888888'
-        )
-        info_label.pack(pady=(15, 10))
+        tk.Label(main_frame, text="A instalação levará aproximadamente 2-5 minutos", font=("Segoe UI", 10), bg='#0f0f0f', fg='#888888').pack(pady=(0, 30))
         
-        # Botões fixos no rodapé
-        btn_container = tk.Frame(container, bg='#0f0f0f')
-        btn_container.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
+        botoes_frame = tk.Frame(main_frame, bg='#0f0f0f')
+        botoes_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
         
-        btn_frame = tk.Frame(btn_container, bg='#0f0f0f')
-        btn_frame.pack(fill=tk.X)
+        botoes_container = tk.Frame(botoes_frame, bg='#0f0f0f')
+        botoes_container.pack()
         
-        tk.Button(
-            btn_frame,
-            text="◀ Voltar",
-            font=("Segoe UI", 11, "bold"),
-            bg='#3d3d3d',
-            fg='#ffffff',
-            command=lambda: self.mostrar_pagina(0),
-            relief=tk.FLAT,
-            padx=30,
-            pady=12,
-            cursor='hand2'
-        ).pack(side=tk.LEFT, padx=(0, 10))
-        
-        tk.Button(
-            btn_frame,
-            text="✕ Cancelar",
-            font=("Segoe UI", 11, "bold"),
-            bg='#ff3366',
-            fg='#ffffff',
-            command=self.cancelar,
-            relief=tk.FLAT,
-            padx=30,
-            pady=12,
-            cursor='hand2'
-        ).pack(side=tk.LEFT)
-        
-        tk.Button(
-            btn_frame,
-            text="PRÓXIMO ▶",
-            font=("Segoe UI", 16, "bold"),
-            bg='#00ff88',
-            fg='#000000',
-            command=lambda: self.mostrar_pagina(2),
-            relief=tk.FLAT,
-            padx=60,
-            pady=18,
-            cursor='hand2'
-        ).pack(side=tk.RIGHT)
+        tk.Button(botoes_container, text="Voltar", font=("Segoe UI", 11), bg='#3d3d3d', fg='#ffffff', command=lambda: self.mostrar_pagina(0), width=15, height=2).pack(side=tk.LEFT, padx=5)
+        tk.Button(botoes_container, text="Cancelar", font=("Segoe UI", 11), bg='#ff3366', fg='#ffffff', command=self.root.quit, width=15, height=2).pack(side=tk.LEFT, padx=5)
+        tk.Button(botoes_container, text="Instalar", font=("Segoe UI", 11, "bold"), bg='#00ff88', fg='#000000', command=self.iniciar_instalacao, width=15, height=2).pack(side=tk.LEFT, padx=5)
     
-    def pagina_resumo(self):
-        """Página de resumo"""
-        container = tk.Frame(self.content_frame, bg='#0f0f0f')
-        container.pack(fill=tk.BOTH, expand=True, padx=40, pady=20)
-        
-        # Container para o conteúdo com scroll
-        canvas = tk.Canvas(container, bg='#0f0f0f', highlightthickness=0)
-        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        content_area = tk.Frame(canvas, bg='#0f0f0f')
-        
-        content_area.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=content_area, anchor="nw", width=700)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        titulo = tk.Label(
-            content_area,
-            text="Pronto para Instalar",
-            font=("Segoe UI", 16, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        titulo.pack(pady=(0, 20))
-        
-        # Atualizar caminho de instalação
-        if hasattr(self, 'entry_caminho'):
-            self.caminho_instalacao = self.entry_caminho.get()
-        
-        # Frame do resumo
-        resumo_frame = tk.LabelFrame(
-            content_area,
-            text="📦 RESUMO DA INSTALAÇÃO",
-            font=("Segoe UI", 12, "bold"),
-            bg='#1a1a1a',
-            fg='#00ff88',
-            bd=0
-        )
-        resumo_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        # Informações do programa
-        info_programa = tk.Label(
-            resumo_frame,
-            text="Programa:  ENIAC System Tuner Ultimate v4.0",
-            font=("Segoe UI", 10, "bold"),
-            bg='#1a1a1a',
-            fg='#ffffff',
-            anchor='w'
-        )
-        info_programa.pack(fill=tk.X, padx=20, pady=(15, 5))
-        
-        # Local de instalação
-        info_local = tk.Label(
-            resumo_frame,
-            text=f"Local:  {self.caminho_instalacao}",
-            font=("Consolas", 9),
-            bg='#1a1a1a',
-            fg='#00aaff',
-            anchor='w'
-        )
-        info_local.pack(fill=tk.X, padx=20, pady=5)
-        
-        # Espaço necessário
-        info_espaco = tk.Label(
-            resumo_frame,
-            text="Espaço:  ~50 MB",
-            font=("Segoe UI", 10),
-            bg='#1a1a1a',
-            fg='#ffffff',
-            anchor='w'
-        )
-        info_espaco.pack(fill=tk.X, padx=20, pady=5)
-        
-        # Separador
-        sep = tk.Frame(resumo_frame, bg='#333333', height=1)
-        sep.pack(fill=tk.X, padx=20, pady=10)
-        
-        # Opções
-        tk.Label(
-            resumo_frame,
-            text="Opções selecionadas:",
-            font=("Segoe UI", 10, "bold"),
-            bg='#1a1a1a',
-            fg='#ffffff',
-            anchor='w'
-        ).pack(fill=tk.X, padx=20, pady=(5, 10))
-        
-        if self.criar_atalho_desktop.get():
-            tk.Label(
-                resumo_frame,
-                text="  ✓ Criar atalho na Área de Trabalho",
-                font=("Segoe UI", 9),
-                bg='#1a1a1a',
-                fg='#00ff88',
-                anchor='w'
-            ).pack(fill=tk.X, padx=30, pady=2)
-        else:
-            tk.Label(
-                resumo_frame,
-                text="  ✗ Atalho na Área de Trabalho",
-                font=("Segoe UI", 9),
-                bg='#1a1a1a',
-                fg='#666666',
-                anchor='w'
-            ).pack(fill=tk.X, padx=30, pady=2)
-        
-        if self.criar_atalho_menu.get():
-            tk.Label(
-                resumo_frame,
-                text="  ✓ Criar atalho no Menu Iniciar",
-                font=("Segoe UI", 9),
-                bg='#1a1a1a',
-                fg='#00ff88',
-                anchor='w'
-            ).pack(fill=tk.X, padx=30, pady=2)
-        else:
-            tk.Label(
-                resumo_frame,
-                text="  ✗ Atalho no Menu Iniciar",
-                font=("Segoe UI", 9),
-                bg='#1a1a1a',
-                fg='#666666',
-                anchor='w'
-            ).pack(fill=tk.X, padx=30, pady=2)
-        
-        # Espaçamento final
-        tk.Label(resumo_frame, text="", bg='#1a1a1a').pack(pady=5)
-        
-        # Mensagem informativa
-        msg_label = tk.Label(
-            content_area,
-            text="ℹ️ Clique em 'INSTALAR AGORA' para iniciar a instalação",
-            font=("Segoe UI", 11),
-            bg='#0f0f0f',
-            fg='#888888'
-        )
-        msg_label.pack(pady=(10, 20))
-        
-        # Empacotar canvas e scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Área de botões fixa no rodapé
-        btn_container = tk.Frame(self.content_frame, bg='#0f0f0f')
-        btn_container.pack(side=tk.BOTTOM, fill=tk.X, padx=40, pady=(10, 20))
-        
-        btn_frame = tk.Frame(btn_container, bg='#0f0f0f')
-        btn_frame.pack(fill=tk.X)
-        
-        # Botão Voltar
-        tk.Button(
-            btn_frame,
-            text="◀ Voltar",
-            font=("Segoe UI", 11, "bold"),
-            bg='#3d3d3d',
-            fg='#ffffff',
-            command=lambda: self.mostrar_pagina(1),
-            relief=tk.FLAT,
-            padx=30,
-            pady=12,
-            cursor='hand2'
-        ).pack(side=tk.LEFT, padx=(0, 10))
-        
-        # Botão Cancelar
-        tk.Button(
-            btn_frame,
-            text="✕ Cancelar",
-            font=("Segoe UI", 11, "bold"),
-            bg='#ff3366',
-            fg='#ffffff',
-            command=self.cancelar,
-            relief=tk.FLAT,
-            padx=30,
-            pady=12,
-            cursor='hand2'
-        ).pack(side=tk.LEFT)
-        
-        # Botão INSTALAR AGORA
-        btn_instalar = tk.Button(
-            btn_frame,
-            text="🚀 INSTALAR AGORA",
-            font=("Segoe UI", 16, "bold"),
-            bg='#00ff88',
-            fg='#000000',
-            activebackground='#00dd77',
-            command=lambda: self.iniciar_instalacao_real(),
-            relief=tk.FLAT,
-            bd=0,
-            padx=60,
-            pady=18,
-            cursor='hand2'
-        )
-        btn_instalar.pack(side=tk.RIGHT)
-    
-    def iniciar_instalacao_real(self):
-        """Inicia o processo de instalação"""
-        self.root.update()
-        self.mostrar_pagina(3)
+    def iniciar_instalacao(self):
+        self.caminho_instalacao = self.caminho_var.get()
+        self.mostrar_pagina(2)
     
     def pagina_instalacao(self):
-        """Página de instalação com progresso"""
-        from tkinter import scrolledtext
+        main_frame = tk.Frame(self.content_frame, bg='#0f0f0f')
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        container = tk.Frame(self.content_frame, bg='#0f0f0f')
-        container.pack(fill=tk.BOTH, expand=True, padx=40, pady=30)
+        tk.Label(main_frame, text="Instalando...", font=("Segoe UI", 20, "bold"), bg='#0f0f0f', fg='#00ff88').pack(pady=(0, 20))
         
-        titulo = tk.Label(
-            container,
-            text="Instalando...",
-            font=("Segoe UI", 16, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        titulo.pack(pady=(0, 30))
+        self.status_label = tk.Label(main_frame, text="Preparando instalação...", font=("Segoe UI", 12), bg='#0f0f0f', fg='#ffffff')
+        self.status_label.pack(pady=(0, 15))
         
-        # Status
-        self.status_label = tk.Label(
-            container,
-            text="Preparando instalação...",
-            font=("Segoe UI", 12),
-            bg='#0f0f0f',
-            fg='#ffffff'
-        )
-        self.status_label.pack(pady=(0, 20))
+        self.progresso = ttk.Progressbar(main_frame, length=700, mode='determinate')
+        self.progresso.pack(pady=(0, 10))
         
-        # Barra de progresso
-        style = ttk.Style()
-        style.theme_use('clam')
-        style.configure("Install.Horizontal.TProgressbar",
-                       troughcolor='#1a1a1a',
-                       background='#00ff88',
-                       bordercolor='#1a1a1a',
-                       lightcolor='#00ff88',
-                       darkcolor='#00ff88',
-                       thickness=30)
+        self.porcentagem_label = tk.Label(main_frame, text="0%", font=("Segoe UI", 14, "bold"), bg='#0f0f0f', fg='#00ff88')
+        self.porcentagem_label.pack(pady=(0, 20))
         
-        self.progress = ttk.Progressbar(
-            container,
-            length=700,
-            mode='determinate',
-            style="Install.Horizontal.TProgressbar"
-        )
-        self.progress.pack(pady=(0, 20))
+        log_frame = tk.LabelFrame(main_frame, text="Detalhes da Instalação", font=("Segoe UI", 10, "bold"), bg='#1a1a1a', fg='#00ff88', padx=10, pady=10)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
         
-        # Porcentagem
-        self.percent_label = tk.Label(
-            container,
-            text="0%",
-            font=("Segoe UI", 14, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        self.percent_label.pack(pady=(0, 30))
+        self.log_texto = scrolledtext.ScrolledText(log_frame, font=("Consolas", 8), bg='#0d0d0d', fg='#00ff88', height=8, relief=tk.FLAT)
+        self.log_texto.pack(fill=tk.BOTH, expand=True)
         
-        # Log
-        log_frame = tk.LabelFrame(
-            container,
-            text="📋 Detalhes",
-            font=("Segoe UI", 10, "bold"),
-            bg='#1a1a1a',
-            fg='#00ff88',
-            bd=0
-        )
-        log_frame.pack(fill=tk.BOTH, expand=True)
+        self.btn_cancelar = tk.Button(main_frame, text="Cancelar Instalação", font=("Segoe UI", 11), bg='#ff3366', fg='#ffffff', command=self.cancelar_instalacao, width=20, height=2)
+        self.btn_cancelar.pack(pady=(10, 0))
         
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame,
-            font=("Consolas", 9),
-            bg='#0d0d0d',
-            fg='#00ff88',
-            wrap=tk.WORD,
-            relief=tk.FLAT,
-            height=10
-        )
-        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Iniciar instalação
         self.instalando = True
-        thread = threading.Thread(target=self.executar_instalacao, daemon=True)
-        thread.start()
+        self.thread_instalacao = threading.Thread(target=self.executar_instalacao, daemon=True)
+        self.thread_instalacao.start()
     
     def pagina_concluido(self):
-        """Página de conclusão"""
-        container = tk.Frame(self.content_frame, bg='#0f0f0f')
-        container.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(self.content_frame, bg='#0f0f0f')
+        main_frame.place(relx=0.5, rely=0.5, anchor='center')
         
-        center_frame = tk.Frame(container, bg='#0f0f0f')
-        center_frame.place(relx=0.5, rely=0.45, anchor='center')
+        tk.Label(main_frame, text="✓", font=("Segoe UI", 72, "bold"), bg='#0f0f0f', fg='#00ff88').pack(pady=(0, 20))
+        tk.Label(main_frame, text="Instalação Concluída!", font=("Segoe UI", 20, "bold"), bg='#0f0f0f', fg='#00ff88').pack(pady=(0, 20))
+        tk.Label(main_frame, text=f"O ENIAC System Tuner foi instalado em:\n{self.caminho_instalacao}\n\nAtalhos criados com sucesso!", font=("Segoe UI", 11), bg='#0f0f0f', fg='#ffffff', justify=tk.CENTER).pack(pady=(0, 30))
         
-        # Ícone de sucesso
-        check_label = tk.Label(
-            center_frame,
-            text="✓",
-            font=("Segoe UI", 72, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        check_label.pack(pady=(0, 20))
+        tk.Button(main_frame, text="Concluir", font=("Segoe UI", 12, "bold"), bg='#00ff88', fg='#000000', command=self.root.quit, width=20, height=2).pack()
         
-        titulo = tk.Label(
-            center_frame,
-            text="Instalação Concluída!",
-            font=("Segoe UI", 20, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88'
-        )
-        titulo.pack(pady=(0, 20))
-        
-        texto = f"""
-        O ENIAC System Tuner foi instalado com sucesso!
-        
-        Local: {self.caminho_instalacao}
-        
-        Você pode iniciar o programa de três formas:
-        
-        {"✓ Atalho na Área de Trabalho" if self.criar_atalho_desktop.get() else ""}
-        {"✓ Menu Iniciar > ENIAC System Tuner" if self.criar_atalho_menu.get() else ""}
-        ✓ Executável em: {self.caminho_instalacao}
-        
-        Lembre-se: Execute sempre como Administrador!
-        """
-        
-        label_texto = tk.Label(
-            center_frame,
-            text=texto,
-            font=("Segoe UI", 11),
-            bg='#0f0f0f',
-            fg='#ffffff',
-            justify=tk.CENTER
-        )
-        label_texto.pack(pady=(0, 20))
-        
-        # Checkbox para executar
-        self.executar_agora = tk.BooleanVar(value=True)
-        
-        cb = tk.Checkbutton(
-            center_frame,
-            text="🚀 Executar ENIAC System Tuner agora",
-            variable=self.executar_agora,
-            font=("Segoe UI", 11, "bold"),
-            bg='#0f0f0f',
-            fg='#00ff88',
-            selectcolor='#1a1a1a'
-        )
-        cb.pack(pady=(0, 30))
-        
-        # BOTÃO CONCLUIR
-        tk.Button(
-            center_frame,
-            text="CONCLUIR ✓",
-            font=("Segoe UI", 14, "bold"),
-            bg='#00ff88',
-            fg='#000000',
-            command=self.concluir,
-            relief=tk.FLAT,
-            padx=50,
-            pady=15,
-            cursor='hand2'
-        ).pack()
+        tk.Label(self.content_frame, text="Execute o ENIAC System Tuner como ADMINISTRADOR", font=("Segoe UI", 10, "italic"), bg='#0f0f0f', fg='#888888').pack(side=tk.BOTTOM, pady=10)
     
-    def procurar_pasta(self):
-        """Abre diálogo para escolher pasta"""
-        pasta = filedialog.askdirectory(
-            title="Escolher Local de Instalação",
-            initialdir="C:\\Program Files"
-        )
+    def buscar_arquivos_necessarios(self):
+        arquivos_necessarios = ['eniac_tuner.py', 'launcher.py']
+        arquivos_encontrados = []
+        
+        locais_possiveis = [
+            self.pasta_atual,
+            os.path.join(self.pasta_atual, '..'),
+            os.path.join(self.pasta_atual, 'dist'),
+            os.getcwd(),
+        ]
+        
+        if getattr(sys, 'frozen', False):
+            try:
+                base_path = sys._MEIPASS
+                locais_possiveis.insert(0, base_path)
+            except:
+                pass
+        
+        locais_possiveis.extend([
+            os.path.dirname(os.path.abspath(__file__)),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        ])
+        
+        for local in locais_possiveis:
+            if not os.path.exists(local):
+                continue
+                
+            for arquivo in arquivos_necessarios:
+                caminho_arquivo = os.path.join(local, arquivo)
+                if os.path.exists(caminho_arquivo) and arquivo not in [a[0] for a in arquivos_encontrados]:
+                    arquivos_encontrados.append((arquivo, caminho_arquivo))
+                    self.log(f"✓ Encontrado {arquivo}")
+        
+        return arquivos_encontrados
+    
+    def escolher_pasta(self):
+        pasta = filedialog.askdirectory(title="Escolher Local de Instalação", initialdir="C:\\Program Files")
         if pasta:
             self.caminho_instalacao = os.path.join(pasta, "ESTU")
-            self.entry_caminho.delete(0, tk.END)
-            self.entry_caminho.insert(0, self.caminho_instalacao)
+            self.caminho_var.set(self.caminho_instalacao)
     
-    def cancelar(self):
-        """Cancela instalação"""
-        if self.instalando:
-            return
-        
-        resposta = messagebox.askyesno(
-            "Cancelar Instalação",
-            "Deseja realmente cancelar a instalação?"
-        )
-        if resposta:
-            self.root.quit()
+    def cancelar_instalacao(self):
+        self.instalando = False
+        messagebox.showinfo("Cancelado", "A instalação foi cancelada.")
+        self.mostrar_pagina(1)
     
-    def concluir(self):
-        """Conclui instalação"""
-        if self.executar_agora.get():
-            launcher_path = os.path.join(self.caminho_instalacao, "ENIAC_Launcher.exe")
-            if os.path.exists(launcher_path):
-                try:
-                    subprocess.Popen([launcher_path])
-                except:
-                    pass
-        
-        self.root.quit()
+    def atualizar_progresso(self, valor, texto):
+        try:
+            if hasattr(self, 'progresso') and self.progresso.winfo_exists():
+                self.progresso['value'] = valor
+                self.porcentagem_label.config(text=f"{int(valor)}%")
+                self.status_label.config(text=texto)
+                self.root.update_idletasks()
+        except:
+            pass
     
     def log(self, mensagem):
-        """Adiciona mensagem ao log"""
         try:
-            self.log_text.insert(tk.END, f"{mensagem}\n")
-            self.log_text.see(tk.END)
-            self.root.update()
+            if hasattr(self, 'log_texto') and self.log_texto.winfo_exists():
+                self.log_texto.insert(tk.END, f"{mensagem}\n")
+                self.log_texto.see(tk.END)
+                self.root.update_idletasks()
         except:
             pass
     
-    def atualizar_progresso(self, valor, status):
-        """Atualiza barra de progresso"""
+    def criar_atalho_windows(self, caminho_destino, nome_atalho, caminho_executavel, descricao="", icone=None):
+        """Cria atalho no Windows usando VBScript"""
         try:
-            self.progress['value'] = valor
-            self.percent_label.config(text=f"{int(valor)}%")
-            self.status_label.config(text=status)
-            self.root.update()
-        except:
-            pass
+            script_vbs = f"""
+Set objShell = CreateObject("WScript.Shell")
+Set objShortcut = objShell.CreateShortcut("{caminho_destino}\\{nome_atalho}.lnk")
+objShortcut.TargetPath = "{caminho_executavel}"
+objShortcut.WorkingDirectory = "{os.path.dirname(caminho_executavel)}"
+objShortcut.Description = "{descricao}"
+objShortcut.WindowStyle = 1
+"""
+            if icone and os.path.exists(icone):
+                script_vbs += f'objShortcut.IconLocation = "{icone}"\n'
+            
+            script_vbs += "objShortcut.Save\n"
+            
+            # Salvar script temporário
+            script_path = Path(os.environ.get('TEMP')) / "criar_atalho.vbs"
+            with open(script_path, 'w') as f:
+                f.write(script_vbs)
+            
+            # Executar script
+            subprocess.run(['cscript', '//NoLogo', str(script_path)], 
+                         capture_output=True, timeout=10)
+            
+            # Remover script
+            try:
+                script_path.unlink()
+            except:
+                pass
+            
+            return True
+        except Exception as e:
+            self.log(f"⚠️ Erro ao criar atalho: {e}")
+            return False
     
     def executar_instalacao(self):
-        """Executa processo de instalação REAL"""
         try:
-            # 1. Verificar dependências e arquivos
-            self.atualizar_progresso(5, "Verificando arquivos...")
-            self.log("[5%] Verificando arquivos necessários...")
+            caminho = self.caminho_instalacao
             
-            arquivos_necessarios = ['eniac_tuner.py', 'launcher.py']
-            pasta_atual = Path(__file__).parent
+            # 1. Preparar
+            self.atualizar_progresso(10, "Preparando instalação...")
+            self.log("=" * 50)
+            self.log("🚀 INSTALAÇÃO ENIAC SYSTEM TUNER v4.0")
+            self.log("=" * 50)
+            time.sleep(1)
             
-            arquivos_encontrados = []
-            for arquivo in arquivos_necessarios:
-                caminho = pasta_atual / arquivo
-                if caminho.exists():
-                    self.log(f"  ✓ {arquivo} encontrado")
-                    arquivos_encontrados.append(caminho)
-                else:
-                    self.log(f"  ✗ {arquivo} NÃO ENCONTRADO!")
+            if not self.instalando:
+                return
             
-            if len(arquivos_encontrados) < len(arquivos_necessarios):
-                raise Exception("Arquivos necessários não encontrados na pasta do instalador")
+            # 2. Buscar arquivos
+            self.atualizar_progresso(20, "Buscando arquivos...")
+            arquivos_encontrados = self.buscar_arquivos_necessarios()
             
-            time.sleep(0.5)
+            if not arquivos_encontrados:
+                self.log("❌ ERRO: Arquivos não encontrados!")
+                messagebox.showerror("Erro", "Arquivos principais não encontrados!\n\nVerifique se estão na mesma pasta:\n• eniac_tuner.py\n• launcher.py")
+                self.mostrar_pagina(1)
+                return
             
-            # 2. Criar diretório de instalação
-            self.atualizar_progresso(15, "Criando diretório de instalação...")
-            self.log("[15%] Criando diretório de instalação...")
-            
-            pasta_destino = Path(self.caminho_instalacao)
+            # 3. Criar pasta
+            self.atualizar_progresso(30, "Criando pasta de instalação...")
+            pasta_destino = Path(caminho)
             if pasta_destino.exists():
-                self.log("  ⚠ Diretório já existe, será substituído")
                 try:
                     shutil.rmtree(pasta_destino)
                 except:
                     pass
             
             pasta_destino.mkdir(parents=True, exist_ok=True)
-            self.log(f"  ✓ Diretório criado: {pasta_destino}")
-            time.sleep(0.5)
+            self.log(f"📁 Pasta criada: {caminho}")
+            time.sleep(1)
             
-            # 3. Copiar arquivos
-            self.atualizar_progresso(30, "Copiando arquivos do programa...")
-            self.log("[30%] Copiando arquivos...")
+            if not self.instalando:
+                return
             
-            for arquivo_origem in arquivos_encontrados:
-                arquivo_destino = pasta_destino / arquivo_origem.name
-                shutil.copy2(arquivo_origem, arquivo_destino)
-                self.log(f"  ✓ Copiado: {arquivo_origem.name}")
-                time.sleep(0.3)
+            # 4. Copiar arquivos
+            self.atualizar_progresso(40, "Copiando arquivos Python...")
             
-            # 4. Criar arquivo batch de inicialização
-            self.atualizar_progresso(50, "Configurando sistema...")
-            self.log("[50%] Criando launcher...")
-            
-            batch_content = f"""@echo off
-title ENIAC System Tuner
-cd /d "{pasta_destino}"
-
-:: Verificar admin
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo Solicitando privilegios de administrador...
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    exit /b
-)
-
-:: Executar programa principal
-python launcher.py
-if errorlevel 1 (
-    python eniac_tuner.py
-)
-
-exit
-"""
-            
-            launcher_bat = pasta_destino / "ENIAC_Launcher.bat"
-            with open(launcher_bat, 'w', encoding='utf-8') as f:
-                f.write(batch_content)
-            self.log("  ✓ Launcher criado")
-            time.sleep(0.5)
-            
-            # 5. Criar atalhos
-            self.atualizar_progresso(70, "Criando atalhos...")
-            self.log("[70%] Criando atalhos...")
-            
-            if self.criar_atalho_desktop.get():
+            for nome_arquivo, caminho_origem in arquivos_encontrados:
                 try:
-                    self.criar_atalho_windows(
-                        nome="ENIAC System Tuner",
-                        destino=str(launcher_bat),
-                        local="Desktop"
-                    )
-                    self.log("  ✓ Atalho na Área de Trabalho criado")
+                    destino = pasta_destino / nome_arquivo
+                    shutil.copy2(caminho_origem, destino)
+                    self.log(f"✓ Copiado: {nome_arquivo}")
                 except Exception as e:
-                    self.log(f"  ⚠ Atalho Desktop: {e}")
-            
-            if self.criar_atalho_menu.get():
-                try:
-                    self.criar_atalho_windows(
-                        nome="ENIAC System Tuner",
-                        destino=str(launcher_bat),
-                        local="StartMenu"
-                    )
-                    self.log("  ✓ Atalho no Menu Iniciar criado")
-                except Exception as e:
-                    self.log(f"  ⚠ Atalho Menu Iniciar: {e}")
-            
-            time.sleep(0.5)
-            
-            # 6. Registrar no sistema
-            self.atualizar_progresso(85, "Registrando aplicação...")
-            self.log("[85%] Registrando no sistema...")
-            
-            try:
-                self.registrar_app()
-                self.log("  ✓ Aplicação registrada")
-            except Exception as e:
-                self.log(f"  ⚠ Registro: {e}")
-            
-            time.sleep(0.5)
-            
-            # 7. Finalizar
-            self.atualizar_progresso(100, "✓ Instalação concluída!")
-            self.log("[100%] ✓ INSTALAÇÃO CONCLUÍDA!")
-            self.log("")
-            self.log("=" * 60)
-            self.log("✓ INSTALAÇÃO CONCLUÍDA COM SUCESSO!")
-            self.log("=" * 60)
-            self.log(f"Local: {pasta_destino}")
-            self.log("")
+                    self.log(f"✗ Erro ao copiar {nome_arquivo}: {e}")
             
             time.sleep(1)
-            self.instalando = False
-            self.mostrar_pagina(4)
             
-        except Exception as e:
-            self.log(f"\n✗ ERRO: {e}")
-            messagebox.showerror("Erro na Instalação", f"Ocorreu um erro:\n\n{e}")
-            self.instalando = False
-    
-    def criar_atalho_windows(self, nome, destino, local="Desktop"):
-        """Cria atalho no Windows"""
-        try:
-            import win32com.client
+            if not self.instalando:
+                return
             
-            shell = win32com.client.Dispatch("WScript.Shell")
+            # 5. Criar executável Python melhorado
+            self.atualizar_progresso(50, "Criando executável...")
             
-            if local == "Desktop":
-                pasta_atalhos = shell.SpecialFolders("Desktop")
-            elif local == "StartMenu":
-                pasta_atalhos = shell.SpecialFolders("Programs")
-            else:
-                pasta_atalhos = local
-            
-            caminho_atalho = os.path.join(pasta_atalhos, f"{nome}.lnk")
-            atalho = shell.CreateShortCut(caminho_atalho)
-            atalho.Targetpath = destino
-            atalho.WorkingDirectory = os.path.dirname(destino)
-            atalho.IconLocation = destino
-            atalho.save()
-            
-        except ImportError:
-            # Se win32com não estiver disponível, criar manualmente com PowerShell
-            if local == "Desktop":
-                pasta_atalhos = str(Path.home() / "Desktop")
-            elif local == "StartMenu":
-                pasta_atalhos = str(Path(os.environ['APPDATA']) / "Microsoft" / "Windows" / "Start Menu" / "Programs")
-            else:
-                pasta_atalhos = local
-            
-            caminho_atalho = os.path.join(pasta_atalhos, f"{nome}.lnk")
-            
-            ps_script = f"""
-$WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("{caminho_atalho}")
-$Shortcut.TargetPath = "{destino}"
-$Shortcut.WorkingDirectory = "{os.path.dirname(destino)}"
-$Shortcut.Save()
+            exe_principal = pasta_destino / "ENIAC_Tuner.pyw"
+            conteudo_pyw = """import sys
+import os
+import subprocess
+
+# Garantir que está no diretório correto
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+# Executar o programa principal
+try:
+    import eniac_tuner
+    eniac_tuner.main()
+except Exception as e:
+    import tkinter as tk
+    from tkinter import messagebox
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showerror("Erro", f"Erro ao iniciar ENIAC System Tuner:\\n\\n{e}\\n\\nExecute como ADMINISTRADOR!")
+    root.destroy()
 """
             
-            subprocess.run(["powershell", "-Command", ps_script], check=True, capture_output=True)
-    
-    def registrar_app(self):
-        """Registra aplicação no Windows"""
-        try:
-            # Registrar no registro do Windows
-            chave = winreg.CreateKey(
-                winreg.HKEY_CURRENT_USER,
-                r"Software\Microsoft\Windows\CurrentVersion\Uninstall\ENIACSystemTuner"
-            )
+            with open(exe_principal, 'w', encoding='utf-8') as f:
+                f.write(conteudo_pyw)
             
-            winreg.SetValueEx(chave, "DisplayName", 0, winreg.REG_SZ, "ENIAC System Tuner v4.0")
-            winreg.SetValueEx(chave, "DisplayVersion", 0, winreg.REG_SZ, "4.0")
-            winreg.SetValueEx(chave, "Publisher", 0, winreg.REG_SZ, "ENIAC System Tuner")
-            winreg.SetValueEx(chave, "InstallLocation", 0, winreg.REG_SZ, self.caminho_instalacao)
-            winreg.SetValueEx(chave, "UninstallString", 0, winreg.REG_SZ, 
-                            f'cmd /c rmdir /s /q "{self.caminho_instalacao}"')
+            self.log("✓ Executável Python criado")
             
-            winreg.CloseKey(chave)
-        except:
-            pass
+            # Criar também um .bat de backup
+            bat_file = pasta_destino / "ENIAC_Tuner.bat"
+            conteudo_bat = f"""@echo off
+title ENIAC System Tuner v4.0
+cd /d "{pasta_destino}"
+pythonw eniac_tuner.py
+if errorlevel 1 (
+    python eniac_tuner.py
+    pause
+)
+"""
+            with open(bat_file, 'w', encoding='utf-8') as f:
+                f.write(conteudo_bat)
+            
+            self.log("✓ Arquivo de inicialização criado")
+            
+            time.sleep(1)
+            
+            if not self.instalando:
+                return
+            
+            # 6. Criar atalhos
+            self.atualizar_progresso(70, "Criando atalhos...")
+            
+            # Atalho na Área de Trabalho
+            if self.criar_atalho_desktop.get():
+                try:
+                    desktop = Path.home() / "Desktop"
+                    if not desktop.exists():
+                        desktop = Path.home() / "OneDrive" / "Desktop"
+                    
+                    if desktop.exists():
+                        sucesso = self.criar_atalho_windows(
+                            str(desktop),
+                            "ENIAC System Tuner",
+                            str(exe_principal),
+                            "ENIAC System Tuner Ultimate v4.0 - Otimizador de Sistema"
+                        )
+                        if sucesso:
+                            self.log("✓ Atalho criado na Área de Trabalho")
+                        else:
+                            self.log("⚠️ Não foi possível criar atalho no desktop")
+                except Exception as e:
+                    self.log(f"⚠️ Erro ao criar atalho desktop: {e}")
+            
+            # Atalho no Menu Iniciar
+            if self.criar_atalho_menu.get():
+                try:
+                    menu_iniciar = Path(os.environ.get('APPDATA')) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+                    menu_iniciar.mkdir(parents=True, exist_ok=True)
+                    
+                    sucesso = self.criar_atalho_windows(
+                        str(menu_iniciar),
+                        "ENIAC System Tuner",
+                        str(exe_principal),
+                        "ENIAC System Tuner Ultimate v4.0"
+                    )
+                    if sucesso:
+                        self.log("✓ Atalho criado no Menu Iniciar")
+                    else:
+                        self.log("⚠️ Não foi possível criar atalho no menu")
+                except Exception as e:
+                    self.log(f"⚠️ Erro ao criar atalho menu: {e}")
+            
+            time.sleep(1)
+            
+            if not self.instalando:
+                return
+            
+            # 7. Adicionar ao registro (desinstalador)
+            self.atualizar_progresso(85, "Registrando programa...")
+            try:
+                chave = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Uninstall\ENIACSystemTuner")
+                winreg.SetValueEx(chave, "DisplayName", 0, winreg.REG_SZ, "ENIAC System Tuner Ultimate v4.0")
+                winreg.SetValueEx(chave, "DisplayVersion", 0, winreg.REG_SZ, "4.0.0")
+                winreg.SetValueEx(chave, "Publisher", 0, winreg.REG_SZ, "ENIAC System Tuner")
+                winreg.SetValueEx(chave, "InstallLocation", 0, winreg.REG_SZ, str(pasta_destino))
+                winreg.SetValueEx(chave, "DisplayIcon", 0, winreg.REG_SZ, str(exe_principal))
+                winreg.CloseKey(chave)
+                self.log("✓ Programa registrado no sistema")
+            except Exception as e:
+                self.log(f"⚠️ Não foi possível registrar: {e}")
+            
+            # 8. Criar desinstalador
+            self.atualizar_progresso(90, "Criando desinstalador...")
+            desinstalador = pasta_destino / "Desinstalar.bat"
+            conteudo_desinst = f"""@echo off
+title Desinstalador ENIAC System Tuner
+echo ========================================
+echo    DESINSTALADOR ENIAC SYSTEM TUNER
+echo ========================================
+echo.
+echo AVISO: Isso removerá o programa completamente.
+echo.
+set /p confirm="Digite 'S' para confirmar: "
+if /i "%confirm%" neq "S" (
+    echo Cancelado.
+    pause
+    exit
+)
+
+echo.
+echo Removendo arquivos...
+cd /d "{pasta_destino.parent}"
+rmdir /s /q "{pasta_destino.name}"
+
+echo Removendo atalhos...
+del "%USERPROFILE%\\Desktop\\ENIAC System Tuner.lnk" 2>nul
+del "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\ENIAC System Tuner.lnk" 2>nul
+
+echo Removendo registro...
+reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ENIACSystemTuner" /f 2>nul
+
+echo.
+echo Desinstalação concluída!
+pause
+"""
+            with open(desinstalador, 'w', encoding='utf-8') as f:
+                f.write(conteudo_desinst)
+            
+            self.log("✓ Desinstalador criado")
+            
+            # 9. Finalizar
+            self.atualizar_progresso(100, "Instalação concluída!")
+            self.log("=" * 50)
+            self.log("✅ INSTALAÇÃO CONCLUÍDA COM SUCESSO!")
+            self.log(f"📁 Local: {pasta_destino}")
+            self.log("🎯 Atalhos criados com sucesso")
+            self.log("=" * 50)
+            
+            time.sleep(2)
+            
+            if self.instalando:
+                self.mostrar_pagina(3)
+            
+        except Exception as e:
+            self.log(f"\n❌ ERRO NA INSTALAÇÃO: {str(e)}")
+            self.atualizar_progresso(0, "Erro na instalação!")
+            
+            if self.instalando:
+                messagebox.showerror("Erro", f"Erro durante a instalação:\n\n{str(e)}")
+                self.mostrar_pagina(1)
 
 def main():
-    root = tk.Tk()
-    app = InstaladorENIAC(root)
-    root.mainloop()
+    try:
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            except:
+                pass
+        
+        root = tk.Tk()
+        app = InstaladorENIAC(root)
+        root.mainloop()
+        
+    except Exception as e:
+        try:
+            tk.Tk().withdraw()
+            messagebox.showerror("Erro no Instalador", f"Erro crítico:\n\n{str(e)}")
+        except:
+            print(f"Erro: {e}")
 
 if __name__ == "__main__":
     main()

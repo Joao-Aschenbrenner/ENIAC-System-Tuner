@@ -1,6 +1,6 @@
 """
-ENIAC SYSTEM TUNER ULTIMATE v4.0 - INTERFACE MODERNA
-Otimizador completo com interface tipo Google Chrome + agendamentos + diagnóstico profundo
+ENIAC SYSTEM TUNER ULTIMATE v4.0 - VERSÃO CORRIGIDA
+Correções: Hardware, Reinicialização, Permissões
 """
 
 import tkinter as tk
@@ -28,12 +28,15 @@ class ENIACTuner:
         
         # Verificar admin
         if not self.is_admin():
-            messagebox.showerror(
+            resposta = messagebox.askyesno(
                 "Permissão Necessária",
-                "Este programa precisa ser executado como ADMINISTRADOR!\n\n"
-                "Clique com botão direito e selecione 'Executar como administrador'"
+                "⚠️ Este programa precisa ser executado como ADMINISTRADOR!\n\n"
+                "Muitas funcionalidades não funcionarão corretamente.\n\n"
+                "Deseja continuar mesmo assim?\n"
+                "(Clique 'Não' para fechar e executar como administrador)"
             )
-            sys.exit(1)
+            if not resposta:
+                sys.exit(1)
         
         self.otimizando = False
         self.aba_atual = "otimizacao"
@@ -44,7 +47,9 @@ class ENIACTuner:
         self.criar_interface()
         self.mostrar_aba("otimizacao")
         self.iniciar_monitoramento()
-        self.detectar_hardware()
+        
+        # Detectar hardware em thread separada
+        threading.Thread(target=self.detectar_hardware, daemon=True).start()
     
     def is_admin(self):
         """Verifica se está rodando como administrador"""
@@ -77,8 +82,9 @@ class ENIACTuner:
         try:
             with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2)
-        except:
-            pass
+            messagebox.showinfo("Sucesso", "✅ Configurações salvas com sucesso!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar configurações:\n{e}")
     
     def criar_interface(self):
         """Cria a interface moderna estilo Chrome"""
@@ -107,7 +113,7 @@ class ENIACTuner:
         
         versao = tk.Label(
             title_frame,
-            text="v4.0 Ultimate Edition",
+            text="v4.0 Ultimate Edition - CORRIGIDO",
             font=("Segoe UI", 9),
             bg='#2d2d2d',
             fg='#888888'
@@ -154,12 +160,14 @@ class ENIACTuner:
         self.status_bar = tk.Frame(self.root, bg='#2d2d2d', height=30)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         
+        admin_status = "✅ Admin" if self.is_admin() else "⚠️ Sem Admin"
+        
         self.status_label = tk.Label(
             self.status_bar,
-            text="● Sistema Pronto | Admin: Sim",
+            text=f"● Sistema Pronto | {admin_status}",
             font=("Segoe UI", 9),
             bg='#2d2d2d',
-            fg='#00ff88',
+            fg='#00ff88' if self.is_admin() else '#ff9900',
             anchor='w',
             padx=10
         )
@@ -222,7 +230,7 @@ class ENIACTuner:
         
         self.hw_info_label = tk.Label(
             hw_frame,
-            text="Detectando hardware...",
+            text="🔄 Detectando hardware...",
             font=("Consolas", 10),
             bg='#2d2d2d',
             fg='#ffffff',
@@ -395,7 +403,7 @@ class ENIACTuner:
             font=("Segoe UI", 11, "bold"),
             bg='#00aaff',
             fg='#000000',
-            command=self.detectar_hardware,
+            command=lambda: threading.Thread(target=self.detectar_hardware, daemon=True).start(),
             relief=tk.FLAT,
             padx=20,
             pady=10,
@@ -584,7 +592,7 @@ class ENIACTuner:
         opcoes_frame.pack(fill=tk.X, pady=(0, 15))
         
         btn_grid = [
-            ("🔍 Erros do Sistema", self.diagnostico_erros, '#ff3366'),
+            ("📌 Erros do Sistema", self.diagnostico_erros, '#ff3366'),
             ("💾 Saúde dos Discos", self.diagnostico_discos, '#00aaff'),
             ("🌡️ Temperatura", self.diagnostico_temperatura, '#ff9900'),
             ("🔌 Drivers", self.diagnostico_drivers, '#9900ff'),
@@ -665,35 +673,119 @@ class ENIACTuner:
             )
             btn.grid(row=i//2, column=i%2, padx=10, pady=10)
     
-    def detectar_hardware(self):
-        """Detecta hardware completo"""
-        info = "=" * 70 + "\n"
-        info += "HARDWARE DETECTADO - " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n"
-        info += "=" * 70 + "\n\n"
+    def detectar_hardware_completo(self):
+        """Detecta hardware com múltiplos métodos"""
+        info_hw = {}
         
         try:
+            # CPU via WMI
+            result = subprocess.run(
+                ['wmic', 'cpu', 'get', 'name'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            cpu_lines = [l.strip() for l in result.stdout.split('\n') if l.strip() and l.strip() != 'Name']
+            info_hw['cpu_nome'] = cpu_lines[0] if cpu_lines else platform.processor()
+        except:
+            info_hw['cpu_nome'] = platform.processor()
+        
+        try:
+            # GPU via WMI
+            result = subprocess.run(
+                ['wmic', 'path', 'win32_VideoController', 'get', 'name'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            gpu_lines = [l.strip() for l in result.stdout.split('\n') if l.strip() and l.strip() != 'Name']
+            info_hw['gpu'] = gpu_lines if gpu_lines else ["Não detectada"]
+        except:
+            info_hw['gpu'] = ["Informação não disponível"]
+        
+        try:
+            # Placa mãe
+            result = subprocess.run(
+                ['wmic', 'baseboard', 'get', 'product,manufacturer'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            lines = [l.strip() for l in result.stdout.split('\n')[1:] if l.strip()]
+            info_hw['motherboard'] = lines[0] if lines else "Não detectada"
+        except:
+            info_hw['motherboard'] = "Informação não disponível"
+        
+        return info_hw
+    
+    def detectar_hardware(self):
+        """Detecta hardware completo com melhorias"""
+        try:
+            # Primeiro, mostrar info básica
+            mem = psutil.virtual_memory()
+            resumo = f"CPU: Detectando...\nRAM: {mem.total / (1024**3):.1f} GB\nSistema: {platform.system()} {platform.release()}"
+            
+            if hasattr(self, 'hw_info_label'):
+                self.hw_info_label.config(text=resumo)
+                self.root.update()
+            
+            # Agora detectar detalhes
+            hw_detalhado = self.detectar_hardware_completo()
+            
+            info = "=" * 70 + "\n"
+            info += "HARDWARE DETECTADO - " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n"
+            info += "=" * 70 + "\n\n"
+            
             # Sistema
             info += "[SISTEMA OPERACIONAL]\n"
             info += f"  Sistema: {platform.system()} {platform.release()}\n"
             info += f"  Versão: {platform.version()}\n"
-            info += f"  Arquitetura: {platform.machine()}\n\n"
+            info += f"  Arquitetura: {platform.machine()}\n"
+            info += f"  Nome do PC: {platform.node()}\n\n"
             
-            # CPU
+            # CPU detalhado
             info += "[PROCESSADOR]\n"
-            info += f"  Modelo: {platform.processor()}\n"
+            info += f"  Modelo: {hw_detalhado.get('cpu_nome', 'Não detectado')}\n"
             info += f"  Núcleos Físicos: {psutil.cpu_count(logical=False)}\n"
-            info += f"  Núcleos Lógicos: {psutil.cpu_count(logical=True)}\n"
-            info += f"  Frequência: {psutil.cpu_freq().current:.0f} MHz\n"
-            info += f"  Uso Atual: {psutil.cpu_percent(interval=1)}%\n\n"
+            info += f"  Núcleos Lógicos (Threads): {psutil.cpu_count(logical=True)}\n"
             
-            # Memória
+            try:
+                freq = psutil.cpu_freq()
+                if freq:
+                    info += f"  Frequência Atual: {freq.current:.0f} MHz\n"
+                    info += f"  Frequência Máxima: {freq.max:.0f} MHz\n"
+            except:
+                pass
+            
+            cpu_percent = psutil.cpu_percent(interval=1)
+            info += f"  Uso Atual: {cpu_percent}%\n"
+            
+            # Cores individuais
+            try:
+                cpu_per_core = psutil.cpu_percent(interval=0.5, percpu=True)
+                info += f"  Uso por Core: "
+                for i, percent in enumerate(cpu_per_core):
+                    info += f"{i}:{percent:.0f}% "
+                info += "\n"
+            except:
+                pass
+            
+            info += "\n"
+            
+            # Memória detalhada
             mem = psutil.virtual_memory()
-            info += "[MEMÓRIA RAM]\n"
-            info += f"  Total: {mem.total / (1024**3):.2f} GB\n"
-            info += f"  Disponível: {mem.available / (1024**3):.2f} GB\n"
-            info += f"  Em Uso: {mem.used / (1024**3):.2f} GB ({mem.percent}%)\n\n"
+            swap = psutil.swap_memory()
             
-            # Discos
+            info += "[MEMÓRIA RAM]\n"
+            info += f"  Total Instalada: {mem.total / (1024**3):.2f} GB\n"
+            info += f"  Disponível: {mem.available / (1024**3):.2f} GB\n"
+            info += f"  Em Uso: {mem.used / (1024**3):.2f} GB ({mem.percent}%)\n"
+            info += f"  Livre: {mem.free / (1024**3):.2f} GB\n"
+            info += f"\n  Memória Virtual (SWAP):\n"
+            info += f"  Total: {swap.total / (1024**3):.2f} GB\n"
+            info += f"  Usado: {swap.used / (1024**3):.2f} GB ({swap.percent}%)\n\n"
+            
+            # Discos detalhados
             info += "[ARMAZENAMENTO]\n"
             hdds = []
             ssds = []
@@ -701,53 +793,99 @@ class ENIACTuner:
             for partition in psutil.disk_partitions():
                 try:
                     usage = psutil.disk_usage(partition.mountpoint)
-                    tipo = "SSD" if "SSD" in partition.device or usage.total < 2**40 else "HDD"
                     
-                    disco_info = f"  {partition.device} ({tipo})\n"
-                    disco_info += f"    Total: {usage.total / (1024**3):.2f} GB\n"
-                    disco_info += f"    Livre: {usage.free / (1024**3):.2f} GB\n"
-                    disco_info += f"    Uso: {usage.percent}%\n"
+                    info += f"  {partition.device}\n"
+                    info += f"    Montagem: {partition.mountpoint}\n"
+                    info += f"    Sistema de Arquivos: {partition.fstype}\n"
+                    info += f"    Total: {usage.total / (1024**3):.2f} GB\n"
+                    info += f"    Usado: {usage.used / (1024**3):.2f} GB\n"
+                    info += f"    Livre: {usage.free / (1024**3):.2f} GB\n"
+                    info += f"    Percentual de Uso: {usage.percent}%\n"
                     
-                    if tipo == "HDD":
+                    # Detectar SSD vs HDD (método aproximado)
+                    tipo_disco = "SSD" if usage.total < 2**40 else "HDD"  # < 1TB geralmente é SSD
+                    info += f"    Tipo Estimado: {tipo_disco}\n"
+                    
+                    if tipo_disco == "HDD":
                         hdds.append(partition.device)
                     else:
                         ssds.append(partition.device)
                     
-                    info += disco_info
+                    if usage.percent > 90:
+                        info += "    ⚠️ AVISO: Disco quase cheio!\n"
+                    elif usage.percent > 80:
+                        info += "    ⚠️ Espaço ficando limitado\n"
+                    
+                    info += "\n"
                 except:
                     pass
             
             if hdds:
-                info += f"\n  HDDs detectados: {', '.join(hdds)}\n"
-                info += "  ⚠️ Recomendado: Agendar desfragmentação\n"
+                info += f"  HDDs detectados: {', '.join(hdds)}\n"
+                info += "  💡 Recomendação: Agendar desfragmentação regular\n\n"
             
+            if ssds:
+                info += f"  SSDs detectados: {', '.join(ssds)}\n"
+                info += "  ✓ SSDs não precisam de desfragmentação\n\n"
+            
+            # GPU
+            info += "[PLACA(S) DE VÍDEO]\n"
+            gpus = hw_detalhado.get('gpu', [])
+            for gpu in gpus:
+                info += f"  • {gpu}\n"
             info += "\n"
             
-            # GPU (tentativa)
-            info += "[PLACA DE VÍDEO]\n"
+            # Placa mãe
+            info += "[PLACA MÃE]\n"
+            info += f"  {hw_detalhado.get('motherboard', 'Não detectada')}\n\n"
+            
+            # Rede
             try:
-                import subprocess
-                result = subprocess.run(['wmic', 'path', 'win32_VideoController', 'get', 'name'],
-                                      capture_output=True, text=True, timeout=5)
-                gpus = [line.strip() for line in result.stdout.split('\n')[1:] if line.strip()]
-                for gpu in gpus:
-                    info += f"  {gpu}\n"
+                net = psutil.net_io_counters()
+                info += "[REDE]\n"
+                info += f"  Bytes Enviados: {net.bytes_sent / (1024**2):.2f} MB\n"
+                info += f"  Bytes Recebidos: {net.bytes_recv / (1024**2):.2f} MB\n"
+                info += f"  Pacotes Enviados: {net.packets_sent}\n"
+                info += f"  Pacotes Recebidos: {net.packets_recv}\n\n"
             except:
-                info += "  Informação não disponível\n"
+                pass
+            
+            # Bateria (notebooks)
+            try:
+                battery = psutil.sensors_battery()
+                if battery:
+                    info += "[BATERIA]\n"
+                    info += f"  Nível: {battery.percent}%\n"
+                    info += f"  Status: {'Carregando' if battery.power_plugged else 'Descarregando'}\n\n"
+            except:
+                pass
             
         except Exception as e:
-            info += f"\n[ERRO] {e}\n"
+            info = f"\n[ERRO ao detectar hardware] {e}\n"
         
-        info += "\n" + "=" * 70
+        info += "=" * 70
         
-        # Atualizar labels
-        resumo = f"CPU: {platform.processor()[:50]}\n"
-        resumo += f"RAM: {psutil.virtual_memory().total / (1024**3):.1f} GB\n"
-        resumo += f"Sistema: {platform.system()} {platform.release()}"
+        # Atualizar resumo
+        try:
+            cpu_nome = hw_detalhado.get('cpu_nome', 'Não detectado')
+            if len(cpu_nome) > 50:
+                cpu_nome = cpu_nome[:50] + "..."
+            
+            resumo = f"CPU: {cpu_nome}\n"
+            resumo += f"RAM: {mem.total / (1024**3):.1f} GB ({mem.percent}% usado)\n"
+            resumo += f"Sistema: {platform.system()} {platform.release()}"
+            
+            if hdds:
+                resumo += f"\n💿 HDDs: {len(hdds)} | "
+            if ssds:
+                resumo += f"⚡ SSDs: {len(ssds)}"
+            
+            if hasattr(self, 'hw_info_label'):
+                self.hw_info_label.config(text=resumo)
+        except:
+            pass
         
-        if hasattr(self, 'hw_info_label'):
-            self.hw_info_label.config(text=resumo)
-        
+        # Atualizar área de texto detalhada
         if hasattr(self, 'hw_text'):
             self.hw_text.delete('1.0', tk.END)
             self.hw_text.insert('1.0', info)
@@ -765,10 +903,14 @@ class ENIACTuner:
         self.label_progresso.config(text=texto)
         self.root.update()
     
-    def executar_comando(self, comando, shell=True):
-        """Executa comando do Windows"""
+    def executar_comando(self, comando, shell=True, requer_admin=True):
+        """Executa comando do Windows com verificação de permissões"""
+        if requer_admin and not self.is_admin():
+            self.log(f"⚠️ Sem privilégios de admin para: {comando}")
+            return False
+        
         try:
-            subprocess.run(
+            result = subprocess.run(
                 comando,
                 shell=shell,
                 check=False,
@@ -776,15 +918,16 @@ class ENIACTuner:
                 text=True,
                 timeout=30
             )
-            return True
-        except:
+            return result.returncode == 0
+        except Exception as e:
+            self.log(f"⚠️ Erro ao executar comando: {e}")
             return False
     
     def toggle_modo_gamer(self, ativo):
         """Ativa/desativa modo gamer"""
         self.config['modo_gamer'] = ativo
         if ativo:
-            messagebox.showinfo("Modo Gamer", "Modo Gamer ativado!\n\nO sistema será otimizado para máximo desempenho em jogos.")
+            messagebox.showinfo("Modo Gamer", "🎮 Modo Gamer ativado!\n\nO sistema será otimizado para máximo desempenho em jogos.")
         else:
             messagebox.showinfo("Modo Gamer", "Modo Gamer desativado.")
     
@@ -798,11 +941,23 @@ class ENIACTuner:
             messagebox.showwarning("Aviso", "Selecione pelo menos uma otimização!")
             return
         
+        if not self.is_admin():
+            messagebox.showwarning(
+                "Permissões Insuficientes",
+                "⚠️ AVISO: Você não está rodando como ADMINISTRADOR!\n\n"
+                "Muitas otimizações podem não funcionar corretamente.\n\n"
+                "Para melhores resultados:\n"
+                "1. Feche este programa\n"
+                "2. Clique direito no ícone\n"
+                "3. Selecione 'Executar como administrador'\n\n"
+                "Deseja continuar mesmo assim?"
+            )
+        
         resposta = messagebox.askyesno(
             "Confirmar Otimização",
-            "Deseja iniciar a otimização completa do sistema?\n\n"
+            "🚀 Deseja iniciar a otimização completa do sistema?\n\n"
             "Isso pode levar alguns minutos.\n"
-            "Ao final, será necessário REINICIAR o computador."
+            "Ao final, será recomendado REINICIAR o computador."
         )
         
         if not resposta:
@@ -874,7 +1029,8 @@ class ENIACTuner:
         finally:
             self.otimizando = False
             self.btn_otimizar.config(state='normal', text='🚀 INICIAR OTIMIZAÇÃO COMPLETA')
-            self.status_label.config(text="● Sistema Pronto | Admin: Sim", fg='#00ff88')
+            admin_status = "✅ Admin" if self.is_admin() else "⚠️ Sem Admin"
+            self.status_label.config(text=f"● Sistema Pronto | {admin_status}", fg='#00ff88' if self.is_admin() else '#ff9900')
     
     def limpar_temporarios(self):
         """Limpa arquivos temporários"""
@@ -884,6 +1040,7 @@ class ENIACTuner:
             os.environ.get('TEMP'),
             'C:\\Windows\\Temp',
             os.path.join(os.environ.get('LOCALAPPDATA'), 'Temp'),
+            os.path.join(os.environ.get('USERPROFILE'), 'AppData', 'Local', 'Temp'),
         ]
         
         arquivos_removidos = 0
@@ -897,12 +1054,13 @@ class ENIACTuner:
                                 arquivos_removidos += 1
                             elif item.is_dir():
                                 shutil.rmtree(item, ignore_errors=True)
+                                arquivos_removidos += 1
                         except:
                             pass
                 except:
                     pass
         
-        self.log(f"  ✅ {arquivos_removidos} arquivos temporários removidos")
+        self.log(f"  ✅ {arquivos_removidos} itens removidos")
     
     def limpar_cache(self):
         """Limpa cache do sistema"""
@@ -912,73 +1070,102 @@ class ENIACTuner:
         caches = [
             os.path.join(os.environ.get('LOCALAPPDATA'), 'Microsoft', 'Windows', 'INetCache'),
             os.path.join(os.environ.get('LOCALAPPDATA'), 'Microsoft', 'Windows', 'WebCache'),
+            os.path.join(os.environ.get('USERPROFILE'), 'AppData', 'Local', 'Microsoft', 'Windows', 'Caches'),
         ]
         
+        removidos = 0
         for cache in caches:
             if os.path.exists(cache):
                 try:
                     shutil.rmtree(cache, ignore_errors=True)
+                    removidos += 1
                 except:
                     pass
         
         # Limpar DNS
-        self.executar_comando('ipconfig /flushdns')
+        if self.executar_comando('ipconfig /flushdns', requer_admin=False):
+            self.log("  ✅ Cache DNS limpo")
         
-        self.log("  ✅ Cache limpo com sucesso")
+        self.log(f"  ✅ {removidos} caches limpos")
     
     def otimizar_registro(self):
         """Otimiza registro do Windows"""
         self.log("📋 Otimizando registro...")
         
+        if not self.is_admin():
+            self.log("  ⚠️ Requer privilégios de administrador")
+            return
+        
+        comandos_aplicados = 0
         comandos = [
-            'reg add "HKCU\\System\\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f',
-            'reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f',
-            'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v EnableLUA /t REG_DWORD /d 1 /f',
+            ('reg add "HKCU\\System\\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f', 'Desabilitar DVR de jogos'),
+            ('reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f', 'Desabilitar telemetria'),
+            ('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f', 'Desabilitar animações'),
         ]
         
-        for cmd in comandos:
-            self.executar_comando(cmd)
+        for cmd, desc in comandos:
+            if self.executar_comando(cmd):
+                comandos_aplicados += 1
+                self.log(f"  ✓ {desc}")
+            else:
+                self.log(f"  ✗ Falha: {desc}")
         
-        self.log("  ✅ Registro otimizado")
+        self.log(f"  ✅ {comandos_aplicados} otimizações de registro aplicadas")
     
     def otimizar_servicos(self):
         """Otimiza serviços do Windows"""
         self.log("⚙️ Otimizando serviços...")
         
+        if not self.is_admin():
+            self.log("  ⚠️ Requer privilégios de administrador")
+            return
+        
         servicos_desabilitar = [
-            'DiagTrack',
-            'dmwappushservice',
-            'WSearch',
-            'SysMain',
-            'TabletInputService',
-            'WMPNetworkSvc'
+            ('DiagTrack', 'Telemetria'),
+            ('dmwappushservice', 'Push de mensagens'),
+            ('WSearch', 'Busca do Windows'),
+            ('SysMain', 'Superfetch'),
         ]
         
-        for servico in servicos_desabilitar:
-            self.executar_comando(f'sc stop {servico}')
-            self.executar_comando(f'sc config {servico} start= disabled')
+        servicos_parados = 0
+        for servico, nome in servicos_desabilitar:
+            if self.executar_comando(f'sc stop {servico}'):
+                if self.executar_comando(f'sc config {servico} start= disabled'):
+                    servicos_parados += 1
+                    self.log(f"  ✓ {nome} desabilitado")
+            else:
+                self.log(f"  • {nome} já parado ou não existe")
         
-        self.log("  ✅ Serviços otimizados")
+        self.log(f"  ✅ {servicos_parados} serviços otimizados")
     
     def otimizar_rede(self):
         """Otimiza configurações de rede"""
         self.log("🌐 Otimizando rede...")
         
         comandos = [
-            'ipconfig /flushdns',
-            'netsh interface tcp set global autotuninglevel=normal',
-            'netsh interface tcp set global chimney=enabled',
-            'netsh interface tcp set global rss=enabled',
+            ('ipconfig /flushdns', 'Limpar DNS', False),
+            ('netsh interface tcp set global autotuninglevel=normal', 'Otimizar TCP', True),
+            ('netsh interface tcp set global chimney=enabled', 'Habilitar Chimney', True),
+            ('netsh int tcp set global rss=enabled', 'Habilitar RSS', True),
         ]
         
-        for cmd in comandos:
-            self.executar_comando(cmd)
+        aplicados = 0
+        for cmd, desc, requer_admin in comandos:
+            if self.executar_comando(cmd, requer_admin=requer_admin):
+                aplicados += 1
+                self.log(f"  ✓ {desc}")
+            else:
+                self.log(f"  • {desc} - não aplicado")
         
-        self.log("  ✅ Rede otimizada")
+        self.log(f"  ✅ {aplicados} otimizações de rede aplicadas")
     
     def configurar_memoria(self):
         """Configura memória virtual"""
         self.log("🧠 Configurando memória virtual...")
+        
+        if not self.is_admin():
+            self.log("  ⚠️ Requer privilégios de administrador")
+            return
         
         try:
             ram_gb = psutil.virtual_memory().total / (1024**3)
@@ -990,41 +1177,61 @@ class ENIACTuner:
             else:
                 min_size, max_size = 8192, 16384
             
-            self.executar_comando('wmic computersystem set AutomaticManagedPagefile=False')
-            self.executar_comando(f'wmic pagefileset set InitialSize={min_size},MaximumSize={max_size}')
-            
-            self.log(f"  ✅ Memória virtual: {min_size/1024:.0f}-{max_size/1024:.0f}GB")
+            # Tentar configurar
+            if self.executar_comando('wmic computersystem set AutomaticManagedPagefile=False'):
+                if self.executar_comando(f'wmic pagefileset set InitialSize={min_size},MaximumSize={max_size}'):
+                    self.log(f"  ✅ Memória virtual: {min_size/1024:.0f}-{max_size/1024:.0f}GB")
+                else:
+                    self.log("  ⚠️ Falha ao configurar tamanhos")
+            else:
+                self.log("  ⚠️ Falha ao desabilitar gerenciamento automático")
         except Exception as e:
-            self.log(f"  ⚠️ Aviso: {e}")
+            self.log(f"  ⚠️ Erro: {e}")
     
     def otimizar_gpu(self):
         """Otimiza para jogos"""
         self.log("🎮 Otimizando para jogos...")
         
         comandos = [
-            'powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c',  # Alto desempenho
-            'reg add "HKCU\\Software\\Microsoft\\GameBar" /v AllowAutoGameMode /t REG_DWORD /d 1 /f',
-            'reg add "HKCU\\Software\\Microsoft\\GameBar" /v AutoGameModeEnabled /t REG_DWORD /d 1 /f',
+            ('powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c', 'Plano Alto Desempenho', True),
+            ('reg add "HKCU\\Software\\Microsoft\\GameBar" /v AllowAutoGameMode /t REG_DWORD /d 1 /f', 'Modo Jogo automático', True),
+            ('reg add "HKCU\\Software\\Microsoft\\GameBar" /v AutoGameModeEnabled /t REG_DWORD /d 1 /f', 'Habilitar Modo Jogo', True),
+            ('reg add "HKCU\\System\\GameConfigStore" /v GameDVR_FSEBehaviorMode /t REG_DWORD /d 2 /f', 'Otimizar tela cheia', True),
         ]
         
-        for cmd in comandos:
-            self.executar_comando(cmd)
+        aplicados = 0
+        for cmd, desc, requer_admin in comandos:
+            if self.executar_comando(cmd, requer_admin=requer_admin):
+                aplicados += 1
+                self.log(f"  ✓ {desc}")
         
-        self.log("  ✅ Sistema otimizado para jogos")
+        self.log(f"  ✅ {aplicados} otimizações para jogos aplicadas")
     
     def otimizar_startup(self):
         """Otimiza inicialização"""
         self.log("🚀 Otimizando inicialização...")
         
+        if not self.is_admin():
+            self.log("  ⚠️ Requer privilégios de administrador")
+            return
+        
         # Desabilitar programas desnecessários do startup
-        comandos = [
-            'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "" /t REG_SZ /d "" /f',
-        ]
-        
-        for cmd in comandos:
-            self.executar_comando(cmd)
-        
-        self.log("  ✅ Inicialização otimizada")
+        try:
+            # Usar Task Manager para desabilitar startups
+            self.log("  💡 Use o Gerenciador de Tarefas > Inicializar para controlar programas")
+            
+            # Otimizar tempo de boot
+            comandos = [
+                'bcdedit /set bootmenupolicy legacy',
+                'bcdedit /timeout 3',
+            ]
+            
+            for cmd in comandos:
+                self.executar_comando(cmd)
+            
+            self.log("  ✅ Configurações de boot otimizadas")
+        except Exception as e:
+            self.log(f"  ⚠️ Erro: {e}")
     
     def finalizar_otimizacao(self):
         """Finaliza processo de otimização"""
@@ -1041,7 +1248,7 @@ class ENIACTuner:
                 self.log(f"  ✅ {nome}")
         
         self.log("")
-        self.log("⚠️ ATENÇÃO: Reinicie o computador para aplicar todas as alterações")
+        self.log("💡 IMPORTANTE: Reinicie o computador para aplicar todas as alterações")
         self.log("=" * 60)
         
         self.status_label.config(text="✅ Otimização completa!", fg='#00ff88')
@@ -1050,12 +1257,46 @@ class ENIACTuner:
             "Otimização Completa!",
             "✅ OTIMIZAÇÃO CONCLUÍDA COM SUCESSO!\n\n"
             "Todas otimizações foram aplicadas.\n\n"
-            "Para melhor resultado, o computador deve ser reiniciado.\n\n"
+            "Para que as mudanças tenham efeito completo,\n"
+            "é ALTAMENTE RECOMENDADO reiniciar o computador.\n\n"
             "Deseja REINICIAR AGORA?"
         )
         
-        if resposta:
-            os.system('shutdown /r /t 10 /c "Reiniciando para aplicar otimizações do ENIAC System Tuner"')
+        if resposta is True:
+            # Usuário clicou SIM - reiniciar
+            try:
+                self.log("🔄 Preparando reinicialização em 10 segundos...")
+                self.log("⏰ Salve todos os trabalhos abertos!")
+                
+                # Dar tempo para o usuário ver e salvar trabalhos
+                for i in range(10, 0, -1):
+                    self.status_label.config(text=f"⏰ Reiniciando em {i} segundos...")
+                    self.root.update()
+                    time.sleep(1)
+                
+                # Executar reinicialização
+                if self.is_admin():
+                    subprocess.Popen(['shutdown', '/r', '/t', '5', '/c', 
+                                    '"ENIAC System Tuner - Aplicando otimizações"'])
+                    self.log("✅ Comando de reinicialização enviado!")
+                    messagebox.showinfo("Reiniciando", 
+                                      "🔄 O computador será reiniciado em 5 segundos!\n\n"
+                                      "Salve todos os trabalhos agora!")
+                else:
+                    messagebox.showwarning("Sem Permissões",
+                                         "⚠️ Não foi possível reiniciar automaticamente.\n\n"
+                                         "Por favor, reinicie manualmente:\n"
+                                         "Menu Iniciar > Reiniciar")
+            except Exception as e:
+                self.log(f"❌ Erro ao tentar reiniciar: {e}")
+                messagebox.showerror("Erro", 
+                                   f"Não foi possível reiniciar automaticamente:\n{e}\n\n"
+                                   "Por favor, reinicie manualmente.")
+        elif resposta is False:
+            # Usuário clicou NÃO - não reiniciar
+            messagebox.showinfo("Lembrete",
+                              "⚠️ Lembre-se de reiniciar o computador mais tarde\n"
+                              "para que todas as otimizações tenham efeito completo!")
     
     def diagnostico_erros(self):
         """Diagnóstico de erros do sistema"""
@@ -1065,16 +1306,23 @@ class ENIACTuner:
         
         try:
             # Verificar logs de eventos
-            cmd = 'wevtutil qe System /c:10 /rd:true /f:text /q:"*[System[(Level=1 or Level=2 or Level=3)]]"'
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+            cmd = 'wevtutil qe System /c:20 /rd:true /f:text /q:"*[System[(Level=1 or Level=2 or Level=3)]]"'
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=15)
             
             self.diag_text.insert(tk.END, "[ERROS RECENTES DO SISTEMA]\n")
-            if result.stdout:
-                self.diag_text.insert(tk.END, result.stdout[:2000])
+            self.diag_text.insert(tk.END, "=" * 50 + "\n\n")
+            
+            if result.stdout and len(result.stdout.strip()) > 0:
+                # Limitar saída
+                erros = result.stdout[:3000]
+                self.diag_text.insert(tk.END, erros)
+                self.diag_text.insert(tk.END, "\n\n... (mostrando primeiros erros)")
             else:
-                self.diag_text.insert(tk.END, "✅ Nenhum erro crítico encontrado\n")
-        except:
-            self.diag_text.insert(tk.END, "⚠️ Erro ao verificar logs\n")
+                self.diag_text.insert(tk.END, "✅ Nenhum erro crítico encontrado nos logs recentes\n")
+        except subprocess.TimeoutExpired:
+            self.diag_text.insert(tk.END, "⏰ Timeout - verificação demorou muito\n")
+        except Exception as e:
+            self.diag_text.insert(tk.END, f"⚠️ Erro ao verificar logs: {e}\n")
     
     def diagnostico_discos(self):
         """Diagnóstico de saúde dos discos"""
@@ -1085,11 +1333,16 @@ class ENIACTuner:
             try:
                 usage = psutil.disk_usage(partition.mountpoint)
                 self.diag_text.insert(tk.END, f"[{partition.device}]\n")
+                self.diag_text.insert(tk.END, f"  Montagem: {partition.mountpoint}\n")
+                self.diag_text.insert(tk.END, f"  Sistema: {partition.fstype}\n")
                 self.diag_text.insert(tk.END, f"  Total: {usage.total / (1024**3):.2f} GB\n")
+                self.diag_text.insert(tk.END, f"  Usado: {usage.used / (1024**3):.2f} GB\n")
                 self.diag_text.insert(tk.END, f"  Livre: {usage.free / (1024**3):.2f} GB\n")
                 self.diag_text.insert(tk.END, f"  Uso: {usage.percent}%\n")
                 
-                if usage.percent > 90:
+                if usage.percent > 95:
+                    self.diag_text.insert(tk.END, "  🔴 CRÍTICO: Disco quase cheio!\n")
+                elif usage.percent > 90:
                     self.diag_text.insert(tk.END, "  ⚠️ ATENÇÃO: Disco quase cheio!\n")
                 elif usage.percent > 80:
                     self.diag_text.insert(tk.END, "  ⚠️ Espaço ficando limitado\n")
@@ -1097,26 +1350,67 @@ class ENIACTuner:
                     self.diag_text.insert(tk.END, "  ✅ Espaço adequado\n")
                 
                 self.diag_text.insert(tk.END, "\n")
-            except:
-                pass
+            except Exception as e:
+                self.diag_text.insert(tk.END, f"  ⚠️ Erro: {e}\n\n")
+        
+        # Verificar SMART (se disponível)
+        self.diag_text.insert(tk.END, "\n[VERIFICAÇÃO SMART]\n")
+        self.diag_text.insert(tk.END, "💡 Para verificação completa SMART, use:\n")
+        self.diag_text.insert(tk.END, "  • CrystalDiskInfo (recomendado)\n")
+        self.diag_text.insert(tk.END, "  • HD Tune\n")
     
     def diagnostico_temperatura(self):
         """Diagnóstico de temperatura"""
         self.diag_text.delete('1.0', tk.END)
         self.diag_text.insert('1.0', "🌡️ Monitoramento de temperatura...\n\n")
-        self.diag_text.insert(tk.END, "⚠️ Funcionalidade requer sensores de hardware específicos\n")
-        self.diag_text.insert(tk.END, "Recomendado: Use HWMonitor ou HWiNFO para detalhes precisos\n")
+        
+        # Tentar obter temperaturas (limitado no Windows)
+        try:
+            # Verificar se psutil suporta temperaturas
+            temps = psutil.sensors_temperatures()
+            if temps:
+                for name, entries in temps.items():
+                    self.diag_text.insert(tk.END, f"[{name}]\n")
+                    for entry in entries:
+                        self.diag_text.insert(tk.END, 
+                            f"  {entry.label or name}: {entry.current}°C\n")
+                    self.diag_text.insert(tk.END, "\n")
+            else:
+                self.diag_text.insert(tk.END, "⚠️ Sensores de temperatura não disponíveis no Windows\n\n")
+        except AttributeError:
+            self.diag_text.insert(tk.END, "⚠️ Monitoramento de temperatura não suportado\n\n")
+        
+        self.diag_text.insert(tk.END, "[RECOMENDAÇÃO]\n")
+        self.diag_text.insert(tk.END, "Para monitoramento completo de temperatura, use:\n")
+        self.diag_text.insert(tk.END, "  • HWMonitor (recomendado)\n")
+        self.diag_text.insert(tk.END, "  • HWiNFO64\n")
+        self.diag_text.insert(tk.END, "  • Core Temp (para CPU)\n")
+        self.diag_text.insert(tk.END, "  • MSI Afterburner (para GPU)\n")
     
     def diagnostico_drivers(self):
         """Diagnóstico de drivers"""
         self.diag_text.delete('1.0', tk.END)
-        self.diag_text.insert('1.0', "🔌 Verificando drivers...\n\n")
+        self.diag_text.insert('1.0', "🔌 Verificando drivers instalados...\n\n")
         
         try:
-            result = subprocess.run('driverquery', shell=True, capture_output=True, text=True, timeout=10)
-            self.diag_text.insert(tk.END, result.stdout[:3000])
-        except:
-            self.diag_text.insert(tk.END, "⚠️ Erro ao listar drivers\n")
+            result = subprocess.run('driverquery', shell=True, capture_output=True, 
+                                  text=True, timeout=10)
+            
+            if result.stdout:
+                # Mostrar primeiros drivers
+                linhas = result.stdout.split('\n')
+                self.diag_text.insert(tk.END, '\n'.join(linhas[:50]))
+                self.diag_text.insert(tk.END, f"\n\n... (mostrando primeiros 50 de {len(linhas)} drivers)")
+            else:
+                self.diag_text.insert(tk.END, "⚠️ Não foi possível listar drivers\n")
+        except Exception as e:
+            self.diag_text.insert(tk.END, f"⚠️ Erro ao listar drivers: {e}\n")
+        
+        self.diag_text.insert(tk.END, "\n\n[VERIFICAÇÃO DE DRIVERS]\n")
+        self.diag_text.insert(tk.END, "Para atualizar drivers:\n")
+        self.diag_text.insert(tk.END, "  1. Windows Update\n")
+        self.diag_text.insert(tk.END, "  2. Site do fabricante do hardware\n")
+        self.diag_text.insert(tk.END, "  3. Driver Booster (ferramenta terceiros)\n")
     
     def iniciar_monitoramento(self):
         """Atualiza status bar periodicamente"""
