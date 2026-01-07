@@ -19,7 +19,6 @@ from pathlib import Path
 import winreg
 import json
 
-import otimizador_avancado
 class ENIACTuner:
     def __init__(self, root):
         self.root = root
@@ -312,23 +311,6 @@ class ENIACTuner:
             cursor='hand2'
         )
         self.btn_otimizar.pack()
-        
-        # Botão de otimização avançada
-        self.btn_otimizar_avancada = tk.Button(
-            btn_frame,
-            text="🔧 OTIMIZAÇÃO AVANÇADA (v4.5)",
-            font=("Segoe UI", 11, "bold"),
-            bg='#9900ff',
-            fg='#ffffff',
-            activebackground='#7700cc',
-            command=self.otimizacao_avancada,
-            relief=tk.FLAT,
-            bd=0,
-            padx=30,
-            pady=10,
-            cursor='hand2'
-        )
-        self.btn_otimizar_avancada.pack(pady=5)
         
         # Progress
         progress_frame = tk.Frame(container, bg='#1e1e1e')
@@ -1443,34 +1425,6 @@ class ENIACTuner:
             pass
         
         self.root.after(2000, self.iniciar_monitoramento)
-    def otimizacao_avancada(self):
-        """Executa otimizações avançadas"""
-        try:
-            import otimizador_avancado
-            otimizador = otimizador_avancado.OtimizadorAvancado()
-            
-            # Executar em thread
-            def executar():
-                self.log("\n🔧 INICIANDO OTIMIZAÇÃO AVANÇADA...")
-                resultados = otimizador.executar_otimizacao_completa()
-                
-                # Mostrar resultados no log
-                self.log("\n🔧 OTIMIZAÇÃO AVANÇADA CONCLUÍDA:")
-                for resultado in resultados:
-                    self.log(f"  {resultado}")
-                
-                messagebox.showinfo("Otimização Avançada", 
-                                  "✅ Otimização avançada concluída!\n\n" 
-                                  "As otimizações foram aplicadas.\n"
-                                  "Verifique o log para detalhes.")
-            
-            thread = threading.Thread(target=executar, daemon=True)
-            thread.start()
-            
-        except Exception as e:
-            self.log(f"❌ Erro na otimização avançada: {e}")
-            messagebox.showerror("Erro", f"Erro na otimização avançada:\n{e}")
-
 
 def main():
     root = tk.Tk()

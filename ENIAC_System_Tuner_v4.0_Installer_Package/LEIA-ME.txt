@@ -1,0 +1,78 @@
+
+╔════════════════════════════════════════════════════════════════════╗
+║                ENIAC SYSTEM TUNER ULTIMATE v4.0                   ║
+║                PACOTE DE INSTALAÇÃO OFICIAL                       ║
+╚════════════════════════════════════════════════════════════════════╝
+
+📦 INFORMAÇÕES DO PROGRAMA:
+• Nome: ENIAC System Tuner Ultimate Edition
+• Versão: 4.0.0
+• Desenvolvedor: ENIAC System Tuner
+• Data: 06/01/2026
+• Tamanho: ~50 MB (após instalação)
+
+🎯 RECURSOS PRINCIPAIS:
+⚡ Otimização Completa do Windows
+💻 Detecção Automática de Hardware
+⏰ Agendamentos Automáticos
+🔍 Diagnóstico Profundo do Sistema
+🎮 Modo Gamer para Alto Desempenho
+🛠️ Ferramentas Integradas do Windows
+
+🚀 COMO INSTALAR:
+
+1. ANTES DE INSTALAR:
+   • Crie um ponto de restauração do sistema
+   • Feche todos os programas abertos
+   • Conecte o computador à energia (para notebooks)
+
+2. PROCESSO DE INSTALAÇÃO:
+   a) Clique com botão direito em 'ENIAC_Installer.exe'
+   b) Selecione 'Executar como administrador'
+   c) Siga o assistente de instalação
+   d) Reinicie o computador após a instalação
+
+3. APÓS INSTALAÇÃO:
+   • Execute sempre como administrador
+   • Use o atalho na Área de Trabalho
+   • Ou: Menu Iniciar > ENIAC System Tuner
+
+⚠️ IMPORTANTE:
+
+• REQUER: Windows 10/11 (64-bit)
+• REQUER: Privilégios de administrador
+• RECOMENDADO: 2 GB RAM, 50 MB espaço livre
+• AVISO: Alguns antivírus podem detectar como falso positivo
+
+🔧 SOLUÇÃO DE PROBLEMAS:
+
+1. Se o instalador não abrir:
+   • Execute como administrador
+   • Desative temporariamente o antivírus
+   • Verifique se o Windows está atualizado
+
+2. Se o programa não funcionar:
+   • Execute como administrador
+   • Verifique se tem Python 3.7+ instalado
+   • Reinstale o programa
+
+3. Otimização não funciona completamente:
+   • Execute como administrador
+   • Reinicie o computador após otimização
+
+📞 SUPORTE:
+
+Para suporte técnico, entre em contato com o desenvolvedor.
+
+• Email: suporte@eniacsystemtuner.com
+• Site: www.eniacsystemtuner.com
+• Documentação: Incluída no programa
+
+⚖️ INFORMAÇÕES LEGAIS:
+
+Copyright © 2025 ENIAC System Tuner. Todos os direitos reservados.
+Este software é fornecido "como está", sem garantias de qualquer tipo.
+
+════════════════════════════════════════════════════════════════════
+
+Gerado automaticamente pelo Criador de Instalador ENIAC v1.0
