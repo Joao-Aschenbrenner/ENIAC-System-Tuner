@@ -1,0 +1,10 @@
+# CODEOWNERS
+# Each line defines owners for matching files/directories.
+# Owners are automatically requested for review when a PR modifies matching files.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owner — all files require review from the repository owner
+* @Joao-Aschenbrenner
+
+# CI / GitHub configuration
+.github/ @Joao-Aschenbrenner
