@@ -1,0 +1,82 @@
+﻿<Window x:Class="ENIAC.Tuner.Installer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ENIAC.Tuner.Installer"
+        mc:Ignorable="d"
+        Title="ENIAC Installer" Height="620" Width="940" MinHeight="560" MinWidth="820" WindowStartupLocation="CenterScreen" Background="#0B0E14">
+    <Window.Resources>
+        <LinearGradientBrush x:Key="HeaderBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#23364E" Offset="0"/>
+            <GradientStop Color="#1A3E35" Offset="1"/>
+        </LinearGradientBrush>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#21314B"/>
+            <Setter Property="Foreground" Value="#F2F7FF"/>
+            <Setter Property="BorderBrush" Value="#3A567A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#0E1421"/>
+            <Setter Property="Foreground" Value="#E8F0FC"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="ENIAC INSTALLER" FontSize="28" FontWeight="Bold" Foreground="#7CF6C4"/>
+                <TextBlock Text="Instalador nativo C# para Windows" Foreground="#C5D2E5" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Background="#111A29" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Pasta de instalacao:" Foreground="#D8E0EA" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox x:Name="InstallPathBox" Grid.Column="1" Height="32" VerticalContentAlignment="Center"/>
+                <Button Grid.Column="2" Content="Procurar" Margin="8,0,0,0" Width="90" Height="32" Click="BrowseButton_Click"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="#111A29" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+            <StackPanel>
+                <CheckBox x:Name="DesktopShortcutCheck" Content="Criar atalho na Area de Trabalho" IsChecked="True" Foreground="#D8E0EA"/>
+                <CheckBox x:Name="StartMenuShortcutCheck" Content="Criar atalho no Menu Iniciar" IsChecked="True" Foreground="#D8E0EA" Margin="0,6,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="3" Background="#111A29" CornerRadius="10" Padding="12" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="Log" Foreground="#D8E0EA" FontWeight="Bold" Margin="0,0,0,8"/>
+                <TextBox x:Name="LogBox" AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True" VerticalScrollBarVisibility="Auto" Height="240"/>
+                <ProgressBar x:Name="InstallProgress" Height="18" Margin="0,10,0,0" Minimum="0" Maximum="100" Foreground="#62E3AF" Background="#24344D"/>
+                <TextBlock x:Name="ProgressText" Text="0%" Foreground="#D8E0EA" HorizontalAlignment="Right" Margin="0,6,0,0" FontWeight="SemiBold"/>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="InstallButton" Content="Instalar" Width="120" Height="34" Margin="0,0,8,0" Click="InstallButton_Click"/>
+            <Button Content="Fechar" Width="120" Height="34" Click="CloseButton_Click"/>
+        </StackPanel>
+
+    </Grid>
+</Window>

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/csharp/" />
+  <Folder Name="/csharp/src/">
+    <Project Path="csharp/src/ENIAC.Tuner.App/ENIAC.Tuner.App.csproj" />
+    <Project Path="csharp/src/ENIAC.Tuner.Cli/ENIAC.Tuner.Cli.csproj" />
+    <Project Path="csharp/src/ENIAC.Tuner.Core/ENIAC.Tuner.Core.csproj" />
+    <Project Path="csharp/src/ENIAC.Tuner.Infrastructure/ENIAC.Tuner.Infrastructure.csproj" />
+    <Project Path="csharp/src/ENIAC.Tuner.Installer/ENIAC.Tuner.Installer.csproj" />
+    <Project Path="csharp/src/ENIAC.Tuner.Tests/ENIAC.Tuner.Tests.csproj" />
+  </Folder>
+</Solution>
