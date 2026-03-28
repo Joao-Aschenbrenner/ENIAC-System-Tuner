@@ -73,6 +73,31 @@ ENIAC.Tuner.Installer.exe
 - **Async/Await** para operações assíncronas
 - **Windows Process API** para execução de comandos
 
+## 🔐 Proteções do Repositório
+
+Este repositório é **público** e toda alteração de código deve passar por um **Pull Request** — push direto para `main` é bloqueado.
+
+### Regras aplicadas ao branch `main`
+
+| Proteção | Configuração |
+|---|---|
+| Pull Request obrigatório | ✅ Mínimo de 1 aprovação |
+| Revisão de code owner obrigatória | ✅ (`@Joao-Aschenbrenner`) |
+| Status check obrigatório | ✅ `Build & Test` (CI deve passar) |
+| Descarte de aprovações em novos commits | ✅ |
+| Resolução de conversas obrigatória | ✅ |
+| Aplica regras ao administrador | ✅ |
+| Force push bloqueado | ✅ |
+| Deleção do branch bloqueada | ✅ |
+
+### Ativar proteções (primeira configuração)
+
+1. Vá em **Settings → Secrets and variables → Actions** e crie um segredo chamado `PROTECTION_TOKEN` com um [Personal Access Token](https://github.com/settings/tokens) com o escopo `repo` (necessário para gerenciar proteções de branch).
+2. Execute o workflow **"Setup Branch Protection"** em **Actions → Setup Branch Protection → Run workflow**.
+3. Confirme em **Settings → Branches** que as regras foram aplicadas ao branch `main`.
+
+---
+
 ## 🔧 Desenvolvimento
 
 ```powershell
