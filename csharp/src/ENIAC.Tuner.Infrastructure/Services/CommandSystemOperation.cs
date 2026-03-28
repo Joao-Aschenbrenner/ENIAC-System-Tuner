@@ -53,13 +53,18 @@ public sealed class CommandSystemOperation : ISystemOperation
             var output = await outputTask.ConfigureAwait(false);
             var error = await errorTask.ConfigureAwait(false);
 
-            // Aceitar exit code 0 ou 1062 para comandos sc (serviço não iniciado é considerado ok)
-            if (process.ExitCode == 0 || (FileName == "sc" && process.ExitCode == 1062))
+            var details = string.IsNullOrWhiteSpace(error) ? output : error;
+
+            // Aceitar 1062 para comandos sc: serviço não iniciado já está em estado esperado.
+            var isScCommand = string.Equals(FileName, "sc", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(FileName, "sc.exe", StringComparison.OrdinalIgnoreCase);
+            var isSc1062 = isScCommand
+                && (process.ExitCode == 1062 || details.Contains("1062", StringComparison.OrdinalIgnoreCase));
+
+            if (process.ExitCode == 0 || isSc1062)
             {
                 return new OperationResult(true, $"{Name}: OK");
             }
-
-            var details = string.IsNullOrWhiteSpace(error) ? output : error;
             return new OperationResult(false, $"{Name}: falhou (exit {process.ExitCode}) - {details.Trim()}");
         }
         catch (Exception ex)
