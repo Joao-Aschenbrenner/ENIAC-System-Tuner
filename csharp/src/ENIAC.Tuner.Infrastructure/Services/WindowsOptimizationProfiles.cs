@@ -93,12 +93,12 @@ public static class WindowsOptimizationProfiles
                     "powercfg", $"/setactive {PowerPlanBalanced}"),
                 new RollbackableCommandOperation(
                     "Desativar SysMain",
-                    "sc", "stop SysMain",
-                    "sc", "start SysMain"),
+                    "sc", "config SysMain start= disabled",
+                    "sc", "config SysMain start= auto"),
                 new RollbackableCommandOperation(
                     "Desativar Indexacao de Busca",
-                    "sc", "stop WSearch",
-                    "sc", "start WSearch"),
+                    "sc", "config WSearch start= disabled",
+                    "sc", "config WSearch start= auto"),
                 new CommandSystemOperation("Flush DNS", "ipconfig", "/flushdns", requiresAdministrator: true)
             ]
         };
