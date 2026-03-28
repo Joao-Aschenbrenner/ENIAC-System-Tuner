@@ -53,7 +53,8 @@ public sealed class CommandSystemOperation : ISystemOperation
             var output = await outputTask.ConfigureAwait(false);
             var error = await errorTask.ConfigureAwait(false);
 
-            if (process.ExitCode == 0)
+            // Aceitar exit code 0 ou 1062 para comandos sc (serviço não iniciado é considerado ok)
+            if (process.ExitCode == 0 || (FileName == "sc" && process.ExitCode == 1062))
             {
                 return new OperationResult(true, $"{Name}: OK");
             }
