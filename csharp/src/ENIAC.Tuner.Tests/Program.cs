@@ -24,6 +24,19 @@ var suites = new List<(string Name, Func<Task> Run)>
         t.Validate_ShouldAllowExtendedCommands();
         return Task.CompletedTask;
     }),
+    ("WindowsOptimizationProfilesTests", () =>
+    {
+        var t = new WindowsOptimizationProfilesTests();
+        t.ExtremeProfile_ShouldNotContainSysMainOperation();
+        t.PolicyMaxProfile_ShouldExposeExpectedPolicyOperations();
+        return Task.CompletedTask;
+    }),
+    ("AppCatalogManagerTests", async () =>
+    {
+        var t = new AppCatalogManagerTests();
+        await t.InstallBatchAsync_ShouldStopOnFirstFailure_WhenStrictMode();
+        await t.InstallBatchAsync_ShouldContinue_WhenContinueOnErrorTrue();
+    }),
     ("RollbackViewModelTests", async () =>
     {
         var t = new RollbackViewModelTests();

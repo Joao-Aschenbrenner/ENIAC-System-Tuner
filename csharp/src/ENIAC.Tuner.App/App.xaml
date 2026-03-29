@@ -4,6 +4,11 @@
              xmlns:local="clr-namespace:ENIAC.Tuner.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- ENIAC Cyberpunk Theme -->
+                <ResourceDictionary Source="Themes/CyberpunkTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
