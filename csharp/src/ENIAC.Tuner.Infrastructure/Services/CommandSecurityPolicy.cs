@@ -4,12 +4,40 @@ public static class CommandSecurityPolicy
 {
     private static readonly HashSet<string> AllowedCommands = new(StringComparer.OrdinalIgnoreCase)
     {
+        // Network diagnostics
         "ipconfig",
         "arp",
         "gpupdate",
         "netsh",
+        
+        // System configuration
         "powercfg",
-        "sc"
+        "sc",
+        "reg",
+        "setx",
+        "bcdedit",
+        "schtasks",
+        "taskkill",
+        "wevtutil",
+        
+        // PowerShell (used in FirstLogon commands)
+        "powershell.exe",
+        "powershell",
+        "cmd.exe",
+        "cmd",
+        
+        // WMI and management
+        "wmic",
+        
+        // Package and feature removal (Windows 11 specific)
+        "dism.exe",
+        "dism",
+        
+        // System properties
+        "wuauclt.exe",
+        "wuauclt",
+        "gpresult",
+        "systeminfo"
     };
 
     private static readonly string[] ForbiddenPatterns =
@@ -20,7 +48,9 @@ public static class CommandSecurityPolicy
         ";",
         "`",
         ">",
-        "<"
+        "<",
+        "$(",  // PowerShell command substitution
+        "&"    // Background job operator
     ];
 
     public static CommandSecurityValidationResult Validate(string fileName, string arguments)

@@ -5,97 +5,215 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="ENIAC System Tuner"
-        Height="700"
-        Width="1100"
-        MinWidth="900"
-        MinHeight="620"
+        Height="750"
+        Width="1200"
+        MinWidth="1000"
+        MinHeight="700"
         WindowStartupLocation="CenterScreen"
-        Background="#0B0E14">
-    <Window.Resources>
-        <LinearGradientBrush x:Key="HeroBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#15253E" Offset="0"/>
-            <GradientStop Color="#103A2E" Offset="1"/>
-        </LinearGradientBrush>
-
-        <Style TargetType="Button">
-            <Setter Property="Background" Value="#21314B"/>
-            <Setter Property="Foreground" Value="#F0F4FA"/>
-            <Setter Property="BorderBrush" Value="#3A567A"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-
-        <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#0C121D"/>
-            <Setter Property="Foreground" Value="#DDE7F5"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="10"/>
-        </Style>
-    </Window.Resources>
-
-    <Grid Margin="18">
+        WindowState="Maximized"
+        Background="#0B0E14"
+        Foreground="#E0E0E0">
+    
+    <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource HeroBrush}" CornerRadius="14" Padding="18" Margin="0,0,0,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#1A1F2E" CornerRadius="8" Padding="16" Margin="0,0,0,12" BorderBrush="#7CF6C4" BorderThickness="1">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel>
-                    <TextBlock Text="ENIAC SYSTEM TUNER" FontSize="30" FontWeight="Bold" Foreground="#7CF6C4"/>
-                    <TextBlock Text="Otimizador profissional para Windows com arquitetura segura" Foreground="#C3D0E2" Margin="0,6,0,0"/>
-                </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="ENIAC SYSTEM TUNER" FontSize="28" FontWeight="Bold" Foreground="#7CF6C4"/>
+                        <TextBlock Text="Plataforma integrada de otimização e setup do Windows" Foreground="#999999" Margin="0,4,0,0" FontSize="12"/>
+                    </StackPanel>
 
-                <Border Grid.Column="1" Background="#1B2B43" Padding="14,8" CornerRadius="20" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding AdminText}" Foreground="#F2F7FF" FontWeight="SemiBold"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Margin="16,0,0,0">
+                        <Border Background="#15253E" Padding="12,6" CornerRadius="4" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding AdminText}" Foreground="#7CF6C4" FontWeight="SemiBold" FontSize="11"/>
+                        </Border>
+                        <Border Background="#15253E" Padding="12,6" CornerRadius="4">
+                            <TextBlock Text="{Binding StatusText}" Foreground="#E0E0E0" FontWeight="SemiBold" FontSize="11"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="#3B1010" Padding="10" CornerRadius="4" Margin="0,10,0,0" BorderBrush="#C82020" BorderThickness="1">
+                    <TextBlock Text="Aviso legal: testado apenas em desktop pessoal. Nao garantimos compatibilidade universal. Alteracoes agressivas podem quebrar funcionalidades." 
+                               Foreground="#FFB0B0" TextWrapping="Wrap" FontSize="11"/>
                 </Border>
-            </Grid>
+            </StackPanel>
         </Border>
 
-        <Border Grid.Row="1" Background="#111A29" CornerRadius="12" Padding="12" Margin="0,0,0,12">
-            <WrapPanel>
-                <Button Content="Analisar Sistema" Width="160" Click="AnalyzeButton_Click" IsEnabled="{Binding CanRunOperations}"/>
-                <Button Content="Diagnostico Detalhado" Width="190" Click="DeepAnalyzeButton_Click" IsEnabled="{Binding CanRunOperations}"/>
-                <Button Content="Otimizacao Segura" Width="180" Click="SafeOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}"/>
-                <Button Content="Otimizacao de Rede" Width="180" Click="NetworkOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}"/>
-                <Button Content="Hardcore" Width="120" Click="HardcoreOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}" Background="#3D2B10" BorderBrush="#C87A20"/>
-                <Button Content="EXTREMO" Width="110" Click="ExtremeOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}" Background="#3B1010" BorderBrush="#C82020" Foreground="#FF9090"/>
-                <Button Content="Reverter" Width="110" Click="RollbackButton_Click" IsEnabled="{Binding HasRollback}" Background="#1A2B3D" BorderBrush="#3A80C8" ToolTip="{Binding LastProfileName, StringFormat=Reverter: {0}}"/>
-                <Button Content="Cancelar" Width="110" Click="CancelButton_Click" IsEnabled="{Binding IsBusy}" Background="#5A2531" BorderBrush="#8E3B4D"/>
-            </WrapPanel>
-        </Border>
+        <!-- Tab Control -->
+        <TabControl x:Name="MainTabControl" Grid.Row="1" Margin="0,0,0,12" Background="#0B0E14" Foreground="#E0E0E0"
+                    SelectionChanged="MainTabControl_SelectionChanged">
+            <!-- Tab 1: Otimização do Windows (pós-instalação) -->
+            <TabItem Header="Otimização Windows" Style="{StaticResource CyberpunkTabItemStyle}">
+                <Grid Background="#0B0E14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="3*"/>
-            </Grid.ColumnDefinitions>
+                    <!-- Operation Buttons -->
+                    <Border Grid.Row="0" Background="#1A1F2E" CornerRadius="8" Padding="12" Margin="0,0,0,12" BorderBrush="#444444" BorderThickness="1">
+                        <WrapPanel>
+                            <Button Content="Analisar Sistema" Width="160" Click="AnalyzeButton_Click" IsEnabled="{Binding CanRunOperations}" Style="{StaticResource CyberpunkButtonStyle}"/>
+                            <Button Content="Diagnostico Detalhado" Width="190" Click="DeepAnalyzeButton_Click" IsEnabled="{Binding CanRunOperations}" Style="{StaticResource CyberpunkButtonStyle}"/>
+                            <Button Content="Otimização Segura" Width="170" Click="SafeOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}" Style="{StaticResource CyberpunkButtonStyle}"/>
+                            <Button Content="Otimização de Rede" Width="170" Click="NetworkOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}" Style="{StaticResource CyberpunkButtonStyle}"/>
+                            <Button Content="Hardcore" Width="120" Click="HardcoreOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}" Background="#3D2B10" BorderBrush="#C87A20" Foreground="#FFD700"/>
+                            <Button Content="EXTREMO" Width="110" Click="ExtremeOptimizeButton_Click" IsEnabled="{Binding CanRunOperations}" Background="#3B1010" BorderBrush="#C82020" Foreground="#FF9090"/>
+                            <Button Content="Policy-Max" Width="130" Click="PolicyMaxButton_Click" IsEnabled="{Binding CanRunOperations}" Background="#102B2A" BorderBrush="#7CF6C4" Foreground="#7CF6C4"/>
+                            <Button Content="Reverter" Width="110" Click="RollbackButton_Click" IsEnabled="{Binding HasRollback}" Background="#1A2B3D" BorderBrush="#3A80C8" ToolTip="{Binding LastProfileName, StringFormat=Reverter: {0}}"/>
+                            <Button Content="Cancelar" Width="110" Click="CancelButton_Click" IsEnabled="{Binding IsBusy}" Background="#5A2531" BorderBrush="#8E3B4D"/>
+                        </WrapPanel>
+                    </Border>
 
-            <Border Grid.Column="0" Background="#111A29" CornerRadius="12" Padding="12" Margin="0,0,8,0">
-                <StackPanel>
-                    <TextBlock Text="Resumo" FontWeight="Bold" Foreground="#E8F0FC" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding SummaryText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Height="410"/>
-                </StackPanel>
-            </Border>
+                    <!-- Content Area -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="3*"/>
+                        </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="1" Background="#111A29" CornerRadius="12" Padding="12">
-                <StackPanel>
-                    <TextBlock Text="Log de operacoes" FontWeight="Bold" Foreground="#E8F0FC" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Height="410"/>
-                </StackPanel>
-            </Border>
-        </Grid>
+                        <Border Grid.Column="0" Style="{StaticResource CyberpunkCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Resumo" FontWeight="Bold" Foreground="#7CF6C4" Margin="0,0,0,8" FontSize="14"/>
+                                <TextBox Text="{Binding SummaryText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Style="{StaticResource CyberpunkTextBoxStyle}" Height="Auto" MinHeight="300"/>
+                            </StackPanel>
+                        </Border>
 
-        <Border Grid.Row="3" Background="#111A29" CornerRadius="12" Padding="12" Margin="0,12,0,0">
+                        <Border Grid.Column="1" Style="{StaticResource CyberpunkCardStyle}" Margin="8,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Log de Operações" FontWeight="Bold" Foreground="#7CF6C4" Margin="0,0,0,8" FontSize="14"/>
+                                <TextBox Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Style="{StaticResource CyberpunkTextBoxStyle}" Height="Auto" MinHeight="300"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 2: Instalação Windows (autounattend) -->
+            <TabItem Header="Instalação Windows" Style="{StaticResource CyberpunkTabItemStyle}">
+                <Border Background="#0B0E14" Padding="16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.ColumnSpan="3">
+                            <TextBlock Text="Gerador unificado de Autounattend" FontSize="18" FontWeight="Bold" Foreground="#7CF6C4" Margin="0,0,0,8"/>
+                            <Border Background="#3B1010" Padding="12" CornerRadius="4" Margin="0,0,0,12">
+                                <TextBlock Text="⚠️ Disclaimer: Testado exclusivamente em desktop pessoal. Sem garantia de compatibilidade universal. Pode quebrar funcionalidades do Windows." 
+                                           Foreground="#FF9090" TextWrapping="Wrap" FontSize="12"/>
+                            </Border>
+                            <WrapPanel Margin="0,0,0,8" VerticalAlignment="Center">
+                                <TextBlock Text="1) Nível de moderação:" Foreground="#9FD6C2" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <ComboBox x:Name="AutounattendPresetComboBox" Width="220" SelectedIndex="0" Margin="0,0,10,0" Style="{StaticResource CyberpunkComboBoxStyle}">
+                                    <ComboBoxItem Content="Moderado" Tag="moderate"/>
+                                    <ComboBoxItem Content="Agressivo" Tag="aggressive"/>
+                                    <ComboBoxItem Content="Seguro" Tag="safe"/>
+                                </ComboBox>
+                                <Button Content="Validar Compatibilidade" Click="ValidateWindowsCompatibilityButton_Click" Style="{StaticResource CyberpunkButtonStyle}"/>
+                            </WrapPanel>
+                            <TextBlock Text="2) Selecione os apps abaixo. 3) Clique em Gerar autounattend.xml no rodapé." Foreground="#999999" Margin="0,0,0,4"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource CyberpunkCardStyle}" Margin="0,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Categorias" Foreground="#7CF6C4" FontWeight="Bold" FontSize="13" Margin="0,0,0,8"/>
+                                <ListBox x:Name="CatalogCategoryListBox"
+                                         Style="{StaticResource CyberpunkListBoxStyle}"
+                                         SelectionChanged="CatalogCategoryListBox_SelectionChanged"
+                                         MinHeight="280"/>
+                                <WrapPanel Margin="0,10,0,0">
+                                    <Button Content="Selecionar Tudo" Click="SelectAllCategoryButton_Click" Style="{StaticResource CyberpunkButtonStyle}"/>
+                                    <Button Content="Limpar Categoria" Click="ClearCategoryButton_Click" Style="{StaticResource CyberpunkButtonStyle}"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource CyberpunkCardStyle}" Margin="0,0,0,0">
+                            <DockPanel>
+                                <TextBlock x:Name="CatalogCategoryTitleText"
+                                           DockPanel.Dock="Top"
+                                           Text="Apps da categoria"
+                                           Foreground="#7CF6C4"
+                                           FontWeight="Bold"
+                                           FontSize="13"
+                                           Margin="0,0,0,8"/>
+                                <ListBox x:Name="CatalogAppsListBox"
+                                         Style="{StaticResource CyberpunkListBoxStyle}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         KeyboardNavigation.TabNavigation="Continue"
+                                         MinHeight="280">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="#2A364D" BorderThickness="0,0,0,1" Padding="4,6">
+                                                <StackPanel>
+                                                    <CheckBox Content="{Binding DisplayName}"
+                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              Style="{StaticResource CyberpunkCheckBoxStyle}"
+                                                              Checked="CatalogAppSelectionChanged"
+                                                              Unchecked="CatalogAppSelectionChanged"/>
+                                                    <TextBlock Text="{Binding WingetId}" Foreground="#7DA3D8" FontSize="10" Margin="28,0,0,0"/>
+                                                    <TextBlock Text="{Binding Description}" Foreground="#BBBBBB" FontSize="11" TextWrapping="Wrap" Margin="28,2,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Grid.Row="2" Grid.ColumnSpan="3" Background="#101826" CornerRadius="6" Padding="10" Margin="0,12,0,0" BorderBrush="#2A364D" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock x:Name="CatalogSummaryText" Text="Selecionados: 0" Foreground="#9FD6C2" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="CatalogStatusText" Text="Pronto para selecionar apps." Foreground="#8EA0BE" FontSize="11"/>
+                                </StackPanel>
+                                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <Button x:Name="GenerateUnifiedAutounattendBottomButton" Content="Gerar autounattend.xml" Click="GenerateUnifiedAutounattendButton_Click" Style="{StaticResource CyberpunkButtonStyle}"/>
+                                </WrapPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+            </TabItem>
+
+            <!-- Tab 3: Logs e Execução -->
+            <TabItem Header="Logs e Execução" Style="{StaticResource CyberpunkTabItemStyle}">
+                <Border Background="#0B0E14" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="Histórico de Operações" FontSize="18" FontWeight="Bold" Foreground="#7CF6C4" Margin="0,0,0,12"/>
+                        <TextBox Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Style="{StaticResource CyberpunkTextBoxStyle}" Height="Auto" MinHeight="400"/>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+        </TabControl>
+
+        <!-- Footer - Progress Bar -->
+        <Border Grid.Row="2" Background="#1A1F2E" CornerRadius="8" Padding="12" BorderBrush="#444444" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
@@ -103,18 +221,18 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#C6D3E6" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#999999" VerticalAlignment="Center" FontSize="11"/>
 
                 <ProgressBar Grid.Column="1"
-                             Height="16"
+                             Height="12"
                              Minimum="0"
                              Maximum="100"
                              Value="{Binding ProgressValue, Mode=OneWay}"
                              Margin="12,0,12,0"
-                             Foreground="#62E3AF"
-                             Background="#24344D"/>
+                             Foreground="#7CF6C4"
+                             Background="#15253E"/>
 
-                <TextBlock Grid.Column="2" Text="{Binding ProgressValue, StringFormat={}{0:F0}%}" Foreground="#EAF1FC" VerticalAlignment="Center" FontWeight="Bold"/>
+                <TextBlock Grid.Column="2" Text="{Binding ProgressValue, StringFormat={}{0:F0}%}" Foreground="#7CF6C4" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
             </Grid>
         </Border>
     </Grid>

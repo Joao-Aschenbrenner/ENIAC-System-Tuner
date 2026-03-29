@@ -79,10 +79,19 @@ public partial class MainWindow : Window
         UpdateProgress(10);
 
         await CopyRequiredBinaryAsync(sourceDir, destination, AppExeName);
-        UpdateProgress(45);
+        UpdateProgress(60);
 
-        await CopyRequiredBinaryAsync(sourceDir, destination, CliExeName);
-        UpdateProgress(70);
+        var cliCopied = await TryCopyOptionalBinaryAsync(sourceDir, destination, CliExeName);
+        if (cliCopied)
+        {
+            AppendLog("CLI detectado e copiado.");
+        }
+        else
+        {
+            AppendLog("CLI não encontrado; instalação seguirá apenas com o app principal.");
+        }
+
+        UpdateProgress(75);
 
         if (DesktopShortcutCheck.IsChecked == true)
         {
@@ -105,23 +114,46 @@ public partial class MainWindow : Window
     private static string ResolveSourceDirectory()
     {
         var baseDir = AppContext.BaseDirectory;
-        var candidates = new[]
+        var cwd = Environment.CurrentDirectory;
+
+        var candidates = new List<string>
         {
             baseDir,
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "ENIAC.Tuner.App", "bin", "Debug", "net10.0-windows")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "ENIAC.Tuner.Cli", "bin", "Debug", "net10.0")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "..", ".."))
+            cwd
         };
+
+        IEnumerable<string> ExpandSearchRoots(string root)
+        {
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                yield break;
+            }
+
+            var dir = new DirectoryInfo(root);
+            while (dir is not null)
+            {
+                yield return dir.FullName;
+                yield return Path.Combine(dir.FullName, "artifacts", "release");
+                yield return Path.Combine(dir.FullName, "csharp", "artifacts", "release");
+                yield return Path.Combine(dir.FullName, "src", "artifacts", "release");
+                yield return Path.Combine(dir.FullName, "src", "ENIAC.Tuner.App", "bin", "Release", "net10.0-windows");
+                yield return Path.Combine(dir.FullName, "src", "ENIAC.Tuner.App", "bin", "Debug", "net10.0-windows");
+                dir = dir.Parent;
+            }
+        }
+
+        candidates.AddRange(ExpandSearchRoots(baseDir));
+        candidates.AddRange(ExpandSearchRoots(cwd));
 
         foreach (var path in candidates.Distinct())
         {
-            if (Directory.Exists(path))
+            if (Directory.Exists(path) && FindFile(path, AppExeName) is not null)
             {
                 return path;
             }
         }
 
-        throw new InvalidOperationException("Não foi possível localizar a pasta de origem dos binários.");
+        throw new InvalidOperationException("Não foi possível localizar a pasta de origem do ENIAC.Tuner.App.exe.");
     }
 
     private async Task CopyRequiredBinaryAsync(string sourceDir, string destinationDir, string fileName)
@@ -137,6 +169,22 @@ public partial class MainWindow : Window
         await using var target = File.Create(dest);
         await source.CopyToAsync(target);
         AppendLog($"Copiado: {fileName}");
+    }
+
+    private async Task<bool> TryCopyOptionalBinaryAsync(string sourceDir, string destinationDir, string fileName)
+    {
+        var file = FindFile(sourceDir, fileName);
+        if (file is null)
+        {
+            return false;
+        }
+
+        var dest = Path.Combine(destinationDir, fileName);
+        await using var source = File.OpenRead(file);
+        await using var target = File.Create(dest);
+        await source.CopyToAsync(target);
+        AppendLog($"Copiado: {fileName}");
+        return true;
     }
 
     private static string? FindFile(string root, string name)

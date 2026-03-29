@@ -16,7 +16,7 @@ public sealed class CommandSecurityPolicyTests
 
     public void Validate_ShouldRejectNonWhitelistedCommand()
     {
-        var result = CommandSecurityPolicy.Validate("cmd", "/c whoami");
+        var result = CommandSecurityPolicy.Validate("curl", "https://example.com");
         TestAssert.False(result.IsAllowed, "Comando fora da whitelist deveria ser bloqueado");
         TestAssert.Contains("nao permitido", result.Reason.ToLowerInvariant(), "Motivo deve indicar bloqueio");
     }
@@ -33,7 +33,7 @@ public sealed class CommandSecurityPolicyTests
 
     public void Validate_ShouldAllowExtendedCommands()
     {
-        var extended = new[] { "powercfg", "sc" };
+        var extended = new[] { "powercfg", "sc", "reg", "cmd", "powershell" };
         foreach (var fileName in extended)
         {
             var result = CommandSecurityPolicy.Validate(fileName, "test");
