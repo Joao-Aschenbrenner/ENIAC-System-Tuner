@@ -1,4 +1,6 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Win32;
 using ENIAC.Tuner.Core.Abstractions;
 using ENIAC.Tuner.Core.Models;
@@ -119,7 +121,15 @@ public partial class MainWindow : Window
     private void ValidateWindowsCompatibilityButton_Click(object sender, RoutedEventArgs e)
     {
         var (build, edition, version) = _compatibilityAnalyzer.GetWindowsInfo();
-        var config = _autounattendBuilder.LoadPreset("aggressive");
+        var selectedPreset = "moderate";
+        if (AutounattendPresetComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item &&
+            item.Tag is string presetFromTag &&
+            !string.IsNullOrWhiteSpace(presetFromTag))
+        {
+            selectedPreset = presetFromTag;
+        }
+
+        var config = _autounattendBuilder.LoadPreset(selectedPreset);
         var (isCompatible, warnings) = _compatibilityAnalyzer.CheckCompatibility(config, build, edition);
 
         var message =
@@ -145,6 +155,13 @@ public partial class MainWindow : Window
 
     private async void MainTabControl_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
+        // Processa apenas a troca real de aba do controle principal.
+        // SelectionChanged de controles filhos (ListBox/ComboBox) tambem borbulha aqui.
+        if (!ReferenceEquals(e.OriginalSource, MainTabControl))
+        {
+            return;
+        }
+
         if (MainTabControl.SelectedIndex != 1) return;
         await EnsureCatalogLoadedAsync();
         PopulateCategoryList();
@@ -154,11 +171,25 @@ public partial class MainWindow : Window
     {
         if (_catalog is null) return;
 
-        CatalogCategoryListBox.ItemsSource = _catalog.Entries.Keys
+        var orderedCategories = _catalog.Entries.Keys
             .OrderBy(c => c.ToString())
             .ToList();
 
-        CatalogCategoryListBox.SelectedIndex = 0;
+        CatalogCategoryListBox.ItemsSource = orderedCategories;
+
+        if (CatalogCategoryListBox.SelectedItem is AppCategory selectedCategory &&
+            orderedCategories.Contains(selectedCategory))
+        {
+            return;
+        }
+
+        if (orderedCategories.Contains(_selectedCategory))
+        {
+            CatalogCategoryListBox.SelectedItem = _selectedCategory;
+            return;
+        }
+
+        CatalogCategoryListBox.SelectedIndex = orderedCategories.Count > 0 ? 0 : -1;
     }
 
     private void CatalogCategoryListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -191,6 +222,57 @@ public partial class MainWindow : Window
         RefreshCatalogSummary();
     }
 
+    private void CatalogAppRow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        // Evita alternar duas vezes quando o clique foi diretamente no CheckBox.
+        if (e.OriginalSource is DependencyObject original && FindVisualParent<CheckBox>(original) is not null)
+        {
+            return;
+        }
+
+        if (sender is FrameworkElement element && element.DataContext is AppEntry app)
+        {
+            app.IsSelected = !app.IsSelected;
+            RefreshCatalogView();
+            e.Handled = true;
+        }
+    }
+
+    private void CatalogAppsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        if (CatalogAppsListBox.SelectedItem is AppEntry app)
+        {
+            app.IsSelected = !app.IsSelected;
+            RefreshCatalogView();
+            e.Handled = true;
+        }
+    }
+
+    private void CatalogAppsListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Space && CatalogAppsListBox.SelectedItem is AppEntry app)
+        {
+            app.IsSelected = !app.IsSelected;
+            RefreshCatalogView();
+            e.Handled = true;
+        }
+    }
+
     private void RefreshCatalogView()
     {
         CatalogAppsListBox.Items.Refresh();
@@ -212,6 +294,22 @@ public partial class MainWindow : Window
         {
             CatalogStatusText.Text = "Pronto para selecionar apps.";
         }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var current = child;
+        while (current is not null)
+        {
+            if (current is T typed)
+            {
+                return typed;
+            }
+
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
     }
 
     private AppCatalog BuildSelectedCatalog(AppCatalog source)

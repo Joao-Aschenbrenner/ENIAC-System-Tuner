@@ -53,12 +53,16 @@ public class AutounattendBuilder : IAutounattendBuilder
     
     public string GenerateXml(AutounattendConfiguration config)
     {
+        XNamespace unattendNs = "urn:schemas-microsoft-com:unattend";
+        XNamespace wcmNs = "http://schemas.microsoft.com/WMIConfig/2002/State";
+
         var doc = new XDocument(
             new XDeclaration("1.0", "utf-8", "yes"),
-            new XElement("unattend",
-                BuildWindowsPESettings(config),
-                BuildSpecializeSettings(config),
-                BuildOobeSystemSettings(config)
+            new XElement(unattendNs + "unattend",
+                new XAttribute(XNamespace.Xmlns + "wcm", wcmNs),
+                BuildWindowsPESettings(config, unattendNs),
+                BuildSpecializeSettings(config, unattendNs, wcmNs),
+                BuildOobeSystemSettings(config, unattendNs, wcmNs)
             )
         );
         
@@ -241,11 +245,11 @@ public class AutounattendBuilder : IAutounattendBuilder
         };
     }
     
-    private XElement BuildWindowsPESettings(AutounattendConfiguration config)
+    private XElement BuildWindowsPESettings(AutounattendConfiguration config, XNamespace ns)
     {
-        return new XElement("settings",
+        return new XElement(ns + "settings",
             new XAttribute("pass", "windowsPE"),
-            new XElement("component",
+            new XElement(ns + "component",
                 new XAttribute("name", "Microsoft-Windows-Setup"),
                 new XAttribute("publicKeyToken", "31bf3856ad364e35"),
                 new XAttribute("language", config.UILanguage),
@@ -254,90 +258,136 @@ public class AutounattendBuilder : IAutounattendBuilder
         );
     }
     
-    private XElement BuildSpecializeSettings(AutounattendConfiguration config)
+    private XElement BuildSpecializeSettings(AutounattendConfiguration config, XNamespace ns, XNamespace wcm)
     {
         var components = new List<XElement>
         {
-            new XElement("component",
+            new XElement(ns + "component",
                 new XAttribute("name", "Microsoft-Windows-Shell-Setup"),
                 new XAttribute("publicKeyToken", "31bf3856ad364e35"),
                 new XAttribute("language", config.UILanguage),
                 new XAttribute("versionScope", "nonSxS"),
-                new XElement("ComputerName", config.ComputerName)
+                new XElement(ns + "ComputerName", config.ComputerName)
             )
         };
-        
-        // Adiciona configurações de remoção de pacotes se existirem
-        foreach (var setting in config.SpecializeSettings)
+
+        var maintenanceCommands = BuildSpecializeMaintenanceCommands(config);
+        if (maintenanceCommands.Any())
         {
-            if (setting.Items.Any())
-            {
-                var itemElements = setting.Items
-                    .Select((item, idx) => new XElement(setting.ComponentName == "RemovePackages" ? "Package" : "Feature",
-                        new XAttribute("name", item)
-                    ))
-                    .Cast<object>()
-                    .ToList();
-                
-                components.Add(new XElement("component",
-                    itemElements.ToArray()
-                ));
-            }
+            var runSyncCommands = maintenanceCommands
+                .OrderBy(cmd => cmd.Order)
+                .Select(cmd => new XElement(ns + "RunSynchronousCommand",
+                    new XAttribute(wcm + "action", "add"),
+                    new XElement(ns + "Order", cmd.Order.ToString()),
+                    new XElement(ns + "Description", cmd.Description),
+                    new XElement(ns + "Path", cmd.CommandLine)
+                ))
+                .ToArray();
+
+            components.Add(new XElement(ns + "component",
+                new XAttribute("name", "Microsoft-Windows-Deployment"),
+                new XAttribute("publicKeyToken", "31bf3856ad364e35"),
+                new XAttribute("language", "neutral"),
+                new XAttribute("versionScope", "nonSxS"),
+                new XElement(ns + "RunSynchronous", runSyncCommands)
+            ));
         }
         
-        return new XElement("settings",
+        return new XElement(ns + "settings",
             new XAttribute("pass", "specialize"),
             components.ToArray()
         );
     }
     
-    private XElement BuildOobeSystemSettings(AutounattendConfiguration config)
+    private XElement BuildOobeSystemSettings(AutounattendConfiguration config, XNamespace ns, XNamespace wcm)
     {
-        XNamespace wcm = "http://schemas.microsoft.com/WMIConfig/2002/State";
-        var elements = new List<XElement>();
-        
-        // Componentes OOBE
-        foreach (var setting in config.OobeSystemSettings)
+        var shellSetupChildren = new List<XElement>();
+
+        var networkLocation = config.OobeSystemSettings
+            .FirstOrDefault(setting => setting.ComponentName == "NetworkLocation")?
+            .Settings
+            .GetValueOrDefault("Type");
+
+        if (!string.IsNullOrWhiteSpace(networkLocation))
         {
-            elements.Add(new XElement("component",
-                new XAttribute("name", setting.ComponentName),
-                new XAttribute("publicKeyToken", "31bf3856ad364e35"),
-                new XAttribute("language", config.UILanguage),
-                new XAttribute("versionScope", "nonSxS"),
-                setting.Settings.Select(kvp => new XElement(kvp.Key, kvp.Value)).ToArray()
+            shellSetupChildren.Add(new XElement(ns + "OOBE",
+                new XElement(ns + "NetworkLocation", networkLocation)
             ));
         }
-        
-        // FirstLogonCommands se houver
+
         if (config.FirstLogonCommands.Any())
         {
             var commands = config.FirstLogonCommands
                 .OrderBy(cmd => cmd.Order)
-                .Select(cmd => new XElement("SynchronousCommand",
-                    new XAttribute(XNamespace.Xmlns + "wcm", wcm),
+                .Select(cmd => new XElement(ns + "SynchronousCommand",
                     new XAttribute(wcm + "action", "add"),
-                    new XElement("Order", cmd.Order.ToString()),
-                    new XElement("Description", cmd.Description),
-                    new XElement("CommandLine", cmd.CommandLine)
+                    new XElement(ns + "Order", cmd.Order.ToString()),
+                    new XElement(ns + "Description", cmd.Description),
+                    new XElement(ns + "CommandLine", cmd.CommandLine)
                 ))
-                .Cast<object>()
-                .ToList();
-            
-            elements.Add(new XElement("component",
+                .ToArray();
+
+            shellSetupChildren.Add(new XElement(ns + "FirstLogonCommands", commands));
+        }
+
+        var components = new List<XElement>();
+        if (shellSetupChildren.Any())
+        {
+            components.Add(new XElement(ns + "component",
                 new XAttribute("name", "Microsoft-Windows-Shell-Setup"),
                 new XAttribute("publicKeyToken", "31bf3856ad364e35"),
                 new XAttribute("language", config.UILanguage),
                 new XAttribute("versionScope", "nonSxS"),
-                new XElement("FirstLogonCommands",
-                    commands.ToArray()
-                )
+                shellSetupChildren.ToArray()
             ));
         }
-        
-        return new XElement("settings",
+
+        return new XElement(ns + "settings",
             new XAttribute("pass", "oobeSystem"),
-            elements.ToArray()
+            components.ToArray()
         );
+    }
+
+    private List<AutounattendCommand> BuildSpecializeMaintenanceCommands(AutounattendConfiguration config)
+    {
+        var commands = new List<AutounattendCommand>();
+        var order = 1;
+
+        foreach (var setting in config.SpecializeSettings)
+        {
+            if (!setting.Items.Any())
+            {
+                continue;
+            }
+
+            if (setting.ComponentName == "RemovePackages")
+            {
+                foreach (var packageName in setting.Items)
+                {
+                    commands.Add(new AutounattendCommand
+                    {
+                        Order = order++,
+                        Description = $"Remove pacote provisionado {packageName}",
+                        CommandLine = $"powershell.exe -ExecutionPolicy Bypass -Command \"Get-AppxProvisionedPackage -Online | Where-Object {{ $_.DisplayName -eq '{packageName}' }} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue\""
+                    });
+                }
+            }
+
+            if (setting.ComponentName == "RemoveFeatures")
+            {
+                foreach (var featureName in setting.Items)
+                {
+                    commands.Add(new AutounattendCommand
+                    {
+                        Order = order++,
+                        Description = $"Desabilita recurso opcional {featureName}",
+                        CommandLine = $"powershell.exe -ExecutionPolicy Bypass -Command \"Disable-WindowsOptionalFeature -Online -FeatureName '{featureName}' -NoRestart -ErrorAction SilentlyContinue\""
+                    });
+                }
+            }
+        }
+
+        return commands;
     }
     
     #endregion

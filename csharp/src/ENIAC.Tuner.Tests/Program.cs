@@ -37,6 +37,12 @@ var suites = new List<(string Name, Func<Task> Run)>
         await t.InstallBatchAsync_ShouldStopOnFirstFailure_WhenStrictMode();
         await t.InstallBatchAsync_ShouldContinue_WhenContinueOnErrorTrue();
     }),
+    ("AutounattendBuilderTests", async () =>
+    {
+        var t = new AutounattendBuilderTests();
+        t.GenerateXml_ShouldUseUnattendNamespaceAndWcmAction();
+        await t.SaveToFileAsync_ShouldPersistValidXml();
+    }),
     ("RollbackViewModelTests", async () =>
     {
         var t = new RollbackViewModelTests();

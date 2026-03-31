@@ -1,0 +1,8 @@
+[PASS] MainDashboardViewModelTests
+[PASS] CommandSecurityPolicyTests
+[PASS] WindowsOptimizationProfilesTests
+[PASS] AppCatalogManagerTests
+[PASS] AutounattendBuilderTests
+[PASS] RollbackViewModelTests
+
+Todos os testes passaram.
