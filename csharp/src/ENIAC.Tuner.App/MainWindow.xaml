@@ -133,6 +133,7 @@
                                 <Button Content="Validar Compatibilidade" Click="ValidateWindowsCompatibilityButton_Click" Style="{StaticResource CyberpunkButtonStyle}"/>
                             </WrapPanel>
                             <TextBlock Text="2) Selecione os apps abaixo. 3) Clique em Gerar autounattend.xml no rodapé." Foreground="#999999" Margin="0,0,0,4"/>
+                            <TextBlock Text="Dica: clique na linha, dê duplo clique ou use Espaço para marcar/desmarcar o app selecionado." Foreground="#7DA3D8" Margin="0,0,0,8" FontSize="11"/>
                         </StackPanel>
 
                         <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource CyberpunkCardStyle}" Margin="0,0,0,0">
@@ -162,10 +163,12 @@
                                          Style="{StaticResource CyberpunkListBoxStyle}"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                                          KeyboardNavigation.TabNavigation="Continue"
+                                         MouseDoubleClick="CatalogAppsListBox_MouseDoubleClick"
+                                         PreviewKeyDown="CatalogAppsListBox_PreviewKeyDown"
                                          MinHeight="280">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="#2A364D" BorderThickness="0,0,0,1" Padding="4,6">
+                                            <Border BorderBrush="#2A364D" BorderThickness="0,0,0,1" Padding="4,6" MouseLeftButtonUp="CatalogAppRow_MouseLeftButtonUp">
                                                 <StackPanel>
                                                     <CheckBox Content="{Binding DisplayName}"
                                                               IsChecked="{Binding IsSelected, Mode=TwoWay}"
